@@ -1,18 +1,23 @@
 package evm
 
 import (
+	"context"
+	"fmt"
 	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/time/rate"
 
+	"github.com/smartcontractkit/chainlink/v2/core/chains/evm/logpoller"
 	"github.com/smartcontractkit/chainlink/v2/core/chains/evm/logpoller/mocks"
 	"github.com/smartcontractkit/chainlink/v2/core/logger"
+	ocr2keepers "github.com/smartcontractkit/ocr2keepers/pkg"
 )
 
-func TestLogFilterManager_Sanity(t *testing.T) {
+func TestLogEventProvider_Sanity(t *testing.T) {
 	tests := []struct {
 		name       string
 		errored    bool
@@ -56,19 +61,19 @@ func TestLogFilterManager_Sanity(t *testing.T) {
 				mp.On("RegisterFilter", mock.Anything).Return(nil)
 				mp.On("UnregisterFilter", mock.Anything, mock.Anything).Return(nil)
 			}
-			lfp := NewLogEventProvider(logger.TestLogger(t), mp)
-			err := lfp.RegisterFilter(tc.upkeepID, tc.upkeepCfg)
+			p := NewLogEventProvider(logger.TestLogger(t), mp)
+			err := p.RegisterFilter(tc.upkeepID, tc.upkeepCfg)
 			if tc.errored {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.NoError(t, lfp.UnregisterFilter(tc.upkeepID))
+				require.NoError(t, p.UnregisterFilter(tc.upkeepID))
 			}
 		})
 	}
 }
 
-func TestLogFilterManager_GetFiltersBySelector(t *testing.T) {
+func TestLogEventProvider_GetFiltersBySelector(t *testing.T) {
 	var zeroBytes [32]byte
 	tests := []struct {
 		name           string
@@ -183,11 +188,11 @@ func TestLogFilterManager_GetFiltersBySelector(t *testing.T) {
 		},
 	}
 
-	lfm := NewLogEventProvider(logger.TestLogger(t), nil)
+	p := NewLogEventProvider(logger.TestLogger(t), nil)
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			sigs := lfm.getFiltersBySelector(tc.filterSelector, tc.filters...)
+			sigs := p.getFiltersBySelector(tc.filterSelector, tc.filters...)
 			if len(sigs) != len(tc.expectedSigs) {
 				t.Fatalf("expected %v, got %v", len(tc.expectedSigs), len(sigs))
 			}
@@ -198,4 +203,102 @@ func TestLogFilterManager_GetFiltersBySelector(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLogEventProvider_GetEntries(t *testing.T) {
+	p := NewLogEventProvider(logger.TestLogger(t), nil)
+
+	_, f := newEntry(p, 1)
+	p.lock.Lock()
+	p.active[f.id.String()] = f
+	p.lock.Unlock()
+
+	t.Run("no entries", func(t *testing.T) {
+		entries := p.getEntries(0, big.NewInt(0))
+		require.Len(t, entries, 1)
+		require.Equal(t, len(entries[0].filter.Addresses), 0)
+	})
+
+	t.Run("has entry with lower lastPollBlock", func(t *testing.T) {
+		entries := p.getEntries(0, f.id)
+		require.Len(t, entries, 1)
+		require.Greater(t, len(entries[0].filter.Addresses), 0)
+		entries = p.getEntries(10, f.id)
+		require.Len(t, entries, 1)
+		require.Greater(t, len(entries[0].filter.Addresses), 0)
+	})
+
+	t.Run("has entry with higher lastPollBlock", func(t *testing.T) {
+		_, f := newEntry(p, 2)
+		f.lastPollBlock = 3
+		p.lock.Lock()
+		p.active[f.id.String()] = f
+		p.lock.Unlock()
+
+		entries := p.getEntries(1, f.id)
+		require.Len(t, entries, 1)
+		require.Equal(t, len(entries[0].filter.Addresses), 0)
+	})
+}
+
+func TestLogEventProvider_GetLogs(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	mp := new(mocks.LogPoller)
+
+	mp.On("RegisterFilter", mock.Anything).Return(nil)
+	mp.On("UnregisterFilter", mock.Anything, mock.Anything).Return(nil)
+	mp.On("LatestBlock", mock.Anything).Return(int64(1), nil)
+	mp.On("LogsWithSigs", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]logpoller.Log{
+		{
+			BlockNumber: 1,
+		},
+	}, nil)
+
+	p := NewLogEventProvider(logger.TestLogger(t), mp)
+
+	var ids []*big.Int
+	for i := 0; i < 10; i++ {
+		cfg, f := newEntry(p, i+1)
+		ids = append(ids, f.id)
+		require.NoError(t, p.RegisterFilter(f.id, cfg))
+	}
+
+	t.Run("no entries", func(t *testing.T) {
+		entries, err := p.GetLogs(ctx, big.NewInt(999999))
+		require.NoError(t, err)
+		require.Len(t, entries, 1)
+		require.Equal(t, len(entries[0]), 0)
+	})
+
+	t.Run("has entries", func(t *testing.T) {
+		entries, err := p.GetLogs(ctx, ids[:2]...)
+		require.NoError(t, err)
+		require.Len(t, entries, 2)
+		require.Equal(t, len(entries[0]), 1)
+	})
+
+	// TODO: test rate limiting
+
+}
+
+func newEntry(p *logEventProvider, i int) (LogTriggerConfig, upkeepFilterEntry) {
+	id := ocr2keepers.UpkeepIdentifier(append(common.LeftPadBytes([]byte{1}, 16), []byte(fmt.Sprintf("%d", i))...))
+	uid := big.NewInt(0).SetBytes(id)
+	// TODO: inject config
+	cfg := LogTriggerConfig{
+		ContractAddress: common.HexToAddress("0x3d53a39550e04688065827f3bb86584cb007ab9ebca7ebd528e7301c9c31eb5d"),
+		FilterSelector:  0,
+		Topic0:          common.HexToHash("0x3d53a39550e04688065827f3bb86584cb007ab9ebca7ebd528e7301c9c31eb5d"),
+	}
+	f := upkeepFilterEntry{
+		id:            uid,
+		filter:        p.newLogFilter(uid, cfg),
+		cfg:           cfg,
+		blockLimiter:  rate.NewLimiter(blockRateLimit, blockLimitBurst),
+		logsLimiter:   rate.NewLimiter(logsRateLimit, logsLimitBurst),
+		lastPollBlock: 0,
+	}
+	return cfg, f
 }
