@@ -22,6 +22,7 @@ type ChainScopedOnlyConfig interface {
 	ChainID() *big.Int
 	EvmEIP1559DynamicFees() bool
 	EvmFinalityDepth() uint32
+	EvmFinalityTag() bool
 	EvmGasBumpPercent() uint16
 	EvmGasBumpThreshold() uint64
 	EvmGasBumpTxDepth() uint32

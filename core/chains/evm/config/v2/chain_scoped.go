@@ -109,6 +109,10 @@ func (c *ChainScoped) EvmFinalityDepth() uint32 {
 	return *c.cfg.FinalityDepth
 }
 
+func (c *ChainScoped) EvmFinalityTag() bool {
+	return *c.cfg.FinalityTag
+}
+
 func (c *ChainScoped) EvmGasBumpPercent() uint16 {
 	return *c.cfg.GasEstimator.BumpPercent
 }

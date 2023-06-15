@@ -211,6 +211,7 @@ type Config interface {
 	ChainType() config.ChainType
 	EvmEIP1559DynamicFees() bool
 	EvmFinalityDepth() uint32
+	EvmFinalityTag() bool
 	EvmGasBumpPercent() uint16
 	EvmGasBumpThreshold() uint64
 	EvmGasBumpWei() *assets.Wei

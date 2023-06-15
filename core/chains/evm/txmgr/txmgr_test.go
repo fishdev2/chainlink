@@ -397,6 +397,7 @@ type mockConfig struct {
 	evmConfig              *evmConfig
 	evmRPCDefaultBatchSize uint32
 	evmFinalityDepth       uint32
+	evmFinalityTag         bool
 	evmGasBumpThreshold    uint64
 }
 
@@ -423,6 +424,7 @@ func (c *mockConfig) EvmMinGasPriceWei() *assets.Wei                       { ret
 func (c *mockConfig) GasEstimatorMode() string                             { return "FixedPrice" }
 func (c *mockConfig) ChainType() config.ChainType                          { return "" }
 func (c *mockConfig) EvmFinalityDepth() uint32                             { return c.evmFinalityDepth }
+func (c *mockConfig) EvmFinalityTag() bool                                 { return c.evmFinalityTag }
 func (c *mockConfig) KeySpecificMaxGasPriceWei(common.Address) *assets.Wei { return assets.NewWeiI(0) }
 
 type testConfig interface {

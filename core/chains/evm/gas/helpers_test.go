@@ -139,6 +139,10 @@ func (m *MockConfig) EvmFinalityDepth() uint32 {
 	panic("not implemented") // TODO: Implement
 }
 
+func (m *MockConfig) EvmFinalityTag() bool {
+	panic("not implemented") // TODO: Implement
+}
+
 func (m *MockConfig) EvmGasBumpPercent() uint16 {
 	return m.EvmGasBumpPercentF
 }

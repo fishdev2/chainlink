@@ -58,6 +58,20 @@ func (_m *Config) EvmFinalityDepth() uint32 {
 	return r0
 }
 
+// EvmFinalityTag provides a mock function with given fields:
+func (_m *Config) EvmFinalityTag() bool {
+	ret := _m.Called()
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func() bool); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
 // EvmGasBumpPercent provides a mock function with given fields:
 func (_m *Config) EvmGasBumpPercent() uint16 {
 	ret := _m.Called()

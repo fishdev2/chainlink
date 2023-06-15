@@ -18,6 +18,7 @@ type Config interface {
 	ChainType() coreconfig.ChainType
 	EvmEIP1559DynamicFees() bool
 	EvmFinalityDepth() uint32
+	EvmFinalityTag() bool
 	EvmGasBumpPercent() uint16
 	EvmGasBumpThreshold() uint64
 	EvmGasBumpTxDepth() uint32
@@ -75,5 +76,7 @@ func (c evmTxmConfig) FeeLimitDefault() uint32 { return c.EvmGasLimitDefault() }
 func (c evmTxmConfig) FeeBumpThreshold() uint64 { return c.EvmGasBumpThreshold() }
 
 func (c evmTxmConfig) FinalityDepth() uint32 { return c.EvmFinalityDepth() }
+
+func (c evmTxmConfig) FinalityTag() bool { return c.EvmFinalityTag() }
 
 func (c evmTxmConfig) FeeBumpPercent() uint16 { return c.EvmGasBumpPercent() }
