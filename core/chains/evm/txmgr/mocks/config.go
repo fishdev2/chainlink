@@ -4,6 +4,7 @@ package mocks
 
 import (
 	common "github.com/ethereum/go-ethereum/common"
+
 	assets "github.com/smartcontractkit/chainlink/v2/core/assets"
 
 	config "github.com/smartcontractkit/chainlink/v2/core/config"
@@ -178,29 +179,15 @@ func (_m *Config) EvmMinGasPriceWei() *assets.Wei {
 	return r0
 }
 
-// EvmNonceAutoSync provides a mock function with given fields:
-func (_m *Config) EvmNonceAutoSync() bool {
+// GasEstimatorMode provides a mock function with given fields:
+func (_m *Config) GasEstimatorMode() string {
 	ret := _m.Called()
 
-	var r0 bool
-	if rf, ok := ret.Get(0).(func() bool); ok {
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
 		r0 = rf()
 	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	return r0
-}
-
-// EvmRPCDefaultBatchSize provides a mock function with given fields:
-func (_m *Config) EvmRPCDefaultBatchSize() uint32 {
-	ret := _m.Called()
-
-	var r0 uint32
-	if rf, ok := ret.Get(0).(func() uint32); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(uint32)
+		r0 = ret.Get(0).(string)
 	}
 
 	return r0
