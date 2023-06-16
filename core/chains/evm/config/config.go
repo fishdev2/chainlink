@@ -20,7 +20,6 @@ type ChainScopedOnlyConfig interface {
 	BlockBackfillSkip() bool
 	BlockEmissionIdleWarningThreshold() time.Duration
 	ChainID() *big.Int
-	EvmEIP1559DynamicFees() bool
 	EvmFinalityDepth() uint32
 	EvmGasBumpPercent() uint16
 	EvmGasBumpThreshold() uint64
@@ -102,6 +101,8 @@ type Transactions interface {
 
 type GasEstimator interface {
 	BlockHistory() BlockHistory
+
+	EIP1559DynamicFees() bool
 }
 
 type BlockHistory interface {

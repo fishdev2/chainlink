@@ -16,7 +16,6 @@ import (
 //go:generate mockery --quiet --recursive --name Config --output ./mocks/ --case=underscore --structname Config --filename config.go
 type Config interface {
 	ChainType() coreconfig.ChainType
-	EvmEIP1559DynamicFees() bool
 	EvmFinalityDepth() uint32
 	EvmGasBumpPercent() uint16
 	EvmGasBumpThreshold() uint64
@@ -29,6 +28,10 @@ type Config interface {
 	EvmNonceAutoSync() bool
 	EvmRPCDefaultBatchSize() uint32
 	KeySpecificMaxGasPriceWei(addr common.Address) *assets.Wei
+}
+
+type GasEstimatorConfig interface {
+	EIP1559DynamicFees() bool
 }
 
 type DatabaseConfig interface {

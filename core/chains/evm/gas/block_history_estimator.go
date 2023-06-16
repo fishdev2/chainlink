@@ -79,7 +79,6 @@ var _ EvmEstimator = &BlockHistoryEstimator{}
 
 type estimatorConfig interface {
 	ChainType() config.ChainType
-	EvmEIP1559DynamicFees() bool
 	EvmGasBumpThreshold() uint64
 	EvmGasBumpPercent() uint16
 	EvmGasLimitMultiplier() float32
@@ -91,6 +90,10 @@ type estimatorConfig interface {
 	bumpConfig
 }
 
+type estimatorGasEstimatorConfig interface {
+	EIP1559DynamicFees() bool
+}
+
 //go:generate mockery --quiet --name Config --output ./mocks/ --case=underscore
 type (
 	BlockHistoryEstimator struct {
@@ -98,6 +101,7 @@ type (
 		ethClient evmclient.Client
 		chainID   big.Int
 		config    estimatorConfig
+		eConfig   estimatorGasEstimatorConfig
 		bhConfig  BlockHistoryConfig
 		// NOTE: it is assumed that blocks will be kept sorted by
 		// block number ascending
@@ -123,12 +127,13 @@ type (
 // NewBlockHistoryEstimator returns a new BlockHistoryEstimator that listens
 // for new heads and updates the base gas price dynamically based on the
 // configured percentile of gas prices in that block
-func NewBlockHistoryEstimator(lggr logger.Logger, ethClient evmclient.Client, cfg estimatorConfig, bhCfg BlockHistoryConfig, chainID big.Int) EvmEstimator {
+func NewBlockHistoryEstimator(lggr logger.Logger, ethClient evmclient.Client, cfg estimatorConfig, eCfg estimatorGasEstimatorConfig, bhCfg BlockHistoryConfig, chainID big.Int) EvmEstimator {
 	ctx, cancel := context.WithCancel(context.Background())
 	b := &BlockHistoryEstimator{
 		ethClient: ethClient,
 		chainID:   chainID,
 		config:    cfg,
+		eConfig:   eCfg,
 		bhConfig:  bhCfg,
 		blocks:    make([]evmtypes.Block, 0),
 		// Must have enough blocks for both estimator and connectivity checker
@@ -384,7 +389,7 @@ func (b *BlockHistoryEstimator) checkConnectivity(attempts []EvmPriorAttempt) er
 }
 
 func (b *BlockHistoryEstimator) GetDynamicFee(_ context.Context, gasLimit uint32, maxGasPriceWei *assets.Wei) (fee DynamicFee, chainSpecificGasLimit uint32, err error) {
-	if !b.config.EvmEIP1559DynamicFees() {
+	if !b.eConfig.EIP1559DynamicFees() {
 		return fee, 0, errors.New("Can't get dynamic fee, EIP1559 is disabled")
 	}
 
@@ -509,7 +514,7 @@ func (b *BlockHistoryEstimator) Recalculate(head *evmtypes.Head) {
 	l := mathutil.Min(len(blockHistory), int(b.bhConfig.BlockHistorySize()))
 	blocks := blockHistory[:l]
 
-	eip1559 := b.config.EvmEIP1559DynamicFees()
+	eip1559 := b.eConfig.EIP1559DynamicFees()
 	percentileGasPrice, percentileTipCap, err := b.calculatePercentilePrices(blocks, percentile, eip1559,
 		func(gasPrices []*assets.Wei) {
 			for i := 0; i <= 100; i += 5 {

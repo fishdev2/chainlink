@@ -50,6 +50,7 @@ func newEvmTxm(
 		txm, err = txmgr.NewTxm(
 			db,
 			cfg,
+			cfg.EVM().GasEstimator(),
 			cfg.EVM().Transactions(),
 			cfg.Database(),
 			cfg.Database().Listener(),

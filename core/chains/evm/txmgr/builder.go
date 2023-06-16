@@ -23,6 +23,7 @@ import (
 func NewTxm(
 	db *sqlx.DB,
 	cfg Config,
+	gCfg GasConfig,
 	txConfig config.Transactions,
 	dbConfig DatabaseConfig,
 	listenerConfig ListenerConfig,
@@ -44,7 +45,7 @@ func NewTxm(
 	}
 	checker := &CheckerFactory{Client: client}
 	// create tx attempt builder
-	txAttemptBuilder := NewEvmTxAttemptBuilder(*client.ConfiguredChainID(), cfg, keyStore, estimator)
+	txAttemptBuilder := NewEvmTxAttemptBuilder(*client.ConfiguredChainID(), cfg, gCfg, keyStore, estimator)
 	txStore := NewTxStore(db, lggr, dbConfig)
 	txNonceSyncer := NewNonceSyncer(txStore, lggr, client, keyStore)
 

@@ -25,28 +25,32 @@ type TxAttemptSigner[ADDR commontypes.Hashable] interface {
 var _ EvmTxAttemptBuilder = (*evmTxAttemptBuilder)(nil)
 
 type evmTxAttemptBuilder struct {
-	chainID  big.Int
-	config   evmTxAttemptBuilderConfig
-	keystore TxAttemptSigner[common.Address]
+	chainID   big.Int
+	config    evmTxAttemptBuilderConfig
+	gasConfig evmTxAttemptBuilderGasConfig
+	keystore  TxAttemptSigner[common.Address]
 	gas.EvmFeeEstimator
 }
 
 type evmTxAttemptBuilderConfig interface {
-	EvmEIP1559DynamicFees() bool
 	EvmGasTipCapMinimum() *assets.Wei
 	EvmMinGasPriceWei() *assets.Wei
 	KeySpecificMaxGasPriceWei(common.Address) *assets.Wei
 }
 
-func NewEvmTxAttemptBuilder(chainID big.Int, config evmTxAttemptBuilderConfig, keystore TxAttemptSigner[common.Address], estimator gas.EvmFeeEstimator) *evmTxAttemptBuilder {
-	return &evmTxAttemptBuilder{chainID, config, keystore, estimator}
+type evmTxAttemptBuilderGasConfig interface {
+	EIP1559DynamicFees() bool
+}
+
+func NewEvmTxAttemptBuilder(chainID big.Int, config evmTxAttemptBuilderConfig, gasConfig evmTxAttemptBuilderGasConfig, keystore TxAttemptSigner[common.Address], estimator gas.EvmFeeEstimator) *evmTxAttemptBuilder {
+	return &evmTxAttemptBuilder{chainID, config, gasConfig, keystore, estimator}
 }
 
 // NewTxAttempt builds an new attempt using the configured fee estimator + using the EIP1559 config to determine tx type
 // used for when a brand new transaction is being created in the txm
 func (c *evmTxAttemptBuilder) NewTxAttempt(ctx context.Context, etx EvmTx, lggr logger.Logger, opts ...feetypes.Opt) (attempt EvmTxAttempt, fee gas.EvmFee, feeLimit uint32, retryable bool, err error) {
 	txType := 0x0
-	if c.config.EvmEIP1559DynamicFees() {
+	if c.gasConfig.EIP1559DynamicFees() {
 		txType = 0x2
 	}
 	return c.NewTxAttemptWithType(ctx, etx, lggr, txType, opts...)

@@ -59,7 +59,7 @@ func NewEstimator(lggr logger.Logger, ethClient evmclient.Client, cfg Config, ge
 		"blockHistorySize", bh.BlockHistorySize(),
 		"eip1559FeeCapBufferBlocks", bh.EIP1559FeeCapBufferBlocks(),
 		"transactionPercentile", bh.TransactionPercentile(),
-		"eip1559DynamicFees", cfg.EvmEIP1559DynamicFees(),
+		"eip1559DynamicFees", geCfg.EIP1559DynamicFees(),
 		"gasBumpPercent", cfg.EvmGasBumpPercent(),
 		"gasBumpThreshold", cfg.EvmGasBumpThreshold(),
 		"gasBumpWei", cfg.EvmGasBumpWei(),
@@ -71,12 +71,12 @@ func NewEstimator(lggr logger.Logger, ethClient evmclient.Client, cfg Config, ge
 		"maxGasPriceWei", cfg.EvmMaxGasPriceWei(),
 		"minGasPriceWei", cfg.EvmMinGasPriceWei(),
 	)
-	df := cfg.EvmEIP1559DynamicFees()
+	df := geCfg.EIP1559DynamicFees()
 	switch s {
 	case "Arbitrum":
 		return NewWrappedEvmEstimator(NewArbitrumEstimator(lggr, cfg, ethClient, ethClient), df)
 	case "BlockHistory":
-		return NewWrappedEvmEstimator(NewBlockHistoryEstimator(lggr, ethClient, cfg, bh, *ethClient.ConfiguredChainID()), df)
+		return NewWrappedEvmEstimator(NewBlockHistoryEstimator(lggr, ethClient, cfg, geCfg, bh, *ethClient.ConfiguredChainID()), df)
 	case "FixedPrice":
 		return NewWrappedEvmEstimator(NewFixedPriceEstimator(cfg, bh, lggr), df)
 	case "Optimism2", "L2Suggested":
@@ -209,7 +209,6 @@ func (e WrappedEvmEstimator) BumpFee(ctx context.Context, originalFee EvmFee, fe
 //go:generate mockery --quiet --name Config --output ./mocks/ --case=underscore
 type Config interface {
 	ChainType() config.ChainType
-	EvmEIP1559DynamicFees() bool
 	EvmFinalityDepth() uint32
 	EvmGasBumpPercent() uint16
 	EvmGasBumpThreshold() uint64
@@ -223,6 +222,10 @@ type Config interface {
 	EvmMaxGasPriceWei() *assets.Wei
 	EvmMinGasPriceWei() *assets.Wei
 	GasEstimatorMode() string
+}
+
+type GasEstimatorConfig interface {
+	EIP1559DynamicFees() bool
 }
 
 type BlockHistoryConfig interface {

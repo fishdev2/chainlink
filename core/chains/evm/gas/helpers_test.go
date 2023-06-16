@@ -111,7 +111,6 @@ func (m *MockBlockHistoryConfig) TransactionPercentile() uint16 {
 
 type MockConfig struct {
 	ChainTypeF             string
-	EvmEIP1559DynamicFeesF bool
 	EvmGasBumpPercentF     uint16
 	EvmGasBumpThresholdF   uint64
 	EvmGasBumpWeiF         *assets.Wei
@@ -129,10 +128,6 @@ func NewMockConfig() *MockConfig {
 
 func (m *MockConfig) ChainType() config.ChainType {
 	return config.ChainType(m.ChainTypeF)
-}
-
-func (m *MockConfig) EvmEIP1559DynamicFees() bool {
-	return m.EvmEIP1559DynamicFeesF
 }
 
 func (m *MockConfig) EvmFinalityDepth() uint32 {
@@ -185,4 +180,12 @@ func (m *MockConfig) EvmMinGasPriceWei() *assets.Wei {
 
 func (m *MockConfig) GasEstimatorMode() string {
 	panic("not implemented") // TODO: Implement
+}
+
+type MockGasEstimatorConfig struct {
+	EIP1559DynamicFeesF bool
+}
+
+func (m *MockGasEstimatorConfig) EIP1559DynamicFees() bool {
+	return m.EIP1559DynamicFeesF
 }

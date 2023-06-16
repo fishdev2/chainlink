@@ -105,10 +105,6 @@ func (c *ChainScoped) BlockEmissionIdleWarningThreshold() time.Duration {
 	return c.NodeNoNewHeadsThreshold()
 }
 
-func (c *ChainScoped) EvmEIP1559DynamicFees() bool {
-	return *c.cfg.GasEstimator.EIP1559DynamicFees
-}
-
 func (t *transactionsConfig) MaxQueued() uint64 {
 	return uint64(*t.c.MaxQueued)
 }
@@ -383,4 +379,8 @@ type gasEstimatorConfig struct {
 
 func (g *gasEstimatorConfig) BlockHistory() config.BlockHistory {
 	return &blockHistoryConfig{c: g.c.BlockHistory, blockDelay: g.blockDelay, bumpThreshold: g.c.BumpThreshold}
+}
+
+func (g *gasEstimatorConfig) EIP1559DynamicFees() bool {
+	return *g.c.EIP1559DynamicFees
 }
