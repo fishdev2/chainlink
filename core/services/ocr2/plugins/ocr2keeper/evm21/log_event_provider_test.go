@@ -214,16 +214,16 @@ func TestLogEventProvider_GetEntries(t *testing.T) {
 	p.lock.Unlock()
 
 	t.Run("no entries", func(t *testing.T) {
-		entries := p.getEntries(0, big.NewInt(0))
+		entries := p.getEntries(0, false, big.NewInt(0))
 		require.Len(t, entries, 1)
 		require.Equal(t, len(entries[0].filter.Addresses), 0)
 	})
 
 	t.Run("has entry with lower lastPollBlock", func(t *testing.T) {
-		entries := p.getEntries(0, f.id)
+		entries := p.getEntries(0, false, f.id)
 		require.Len(t, entries, 1)
 		require.Greater(t, len(entries[0].filter.Addresses), 0)
-		entries = p.getEntries(10, f.id)
+		entries = p.getEntries(10, false, f.id)
 		require.Len(t, entries, 1)
 		require.Greater(t, len(entries[0].filter.Addresses), 0)
 	})
@@ -235,9 +235,13 @@ func TestLogEventProvider_GetEntries(t *testing.T) {
 		p.active[f.id.String()] = f
 		p.lock.Unlock()
 
-		entries := p.getEntries(1, f.id)
+		entries := p.getEntries(1, false, f.id)
 		require.Len(t, entries, 1)
 		require.Equal(t, len(entries[0].filter.Addresses), 0)
+
+		entries = p.getEntries(1, true, f.id)
+		require.Len(t, entries, 1)
+		require.Greater(t, len(entries[0].filter.Addresses), 0)
 	})
 }
 
@@ -253,6 +257,7 @@ func TestLogEventProvider_GetLogs(t *testing.T) {
 	mp.On("LogsWithSigs", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]logpoller.Log{
 		{
 			BlockNumber: 1,
+			TxHash:      common.HexToHash("0x1"),
 		},
 	}, nil)
 
@@ -266,17 +271,15 @@ func TestLogEventProvider_GetLogs(t *testing.T) {
 	}
 
 	t.Run("no entries", func(t *testing.T) {
-		entries, err := p.GetLogs(ctx, big.NewInt(999999))
-		require.NoError(t, err)
-		require.Len(t, entries, 1)
-		require.Equal(t, len(entries[0]), 0)
+		require.NoError(t, p.FetchLogs(ctx, false, big.NewInt(999999)))
+		logs := p.buffer.dequeue(10)
+		require.Len(t, logs, 0)
 	})
 
 	t.Run("has entries", func(t *testing.T) {
-		entries, err := p.GetLogs(ctx, ids[:2]...)
-		require.NoError(t, err)
-		require.Len(t, entries, 2)
-		require.Equal(t, len(entries[0]), 1)
+		require.NoError(t, p.FetchLogs(ctx, true, ids[:2]...))
+		logs := p.buffer.dequeue(10)
+		require.Len(t, logs, 2)
 	})
 
 	// TODO: test rate limiting
@@ -297,7 +300,6 @@ func newEntry(p *logEventProvider, i int) (LogTriggerConfig, upkeepFilterEntry) 
 		filter:        p.newLogFilter(uid, cfg),
 		cfg:           cfg,
 		blockLimiter:  rate.NewLimiter(blockRateLimit, blockLimitBurst),
-		logsLimiter:   rate.NewLimiter(logsRateLimit, logsLimitBurst),
 		lastPollBlock: 0,
 	}
 	return cfg, f

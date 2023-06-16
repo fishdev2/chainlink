@@ -805,6 +805,7 @@ func TestIntegration_LogEventProvider(t *testing.T) {
 
 		contracts = append(contracts, upkeepContract)
 		contractsAddrs = append(contractsAddrs, upkeepAddr)
+
 		// logTriggerConfigType := abi.MustNewType("tuple(address contractAddress, uint8 filterSelector, bytes32 topic0, bytes32 topic1, bytes32 topic2, bytes32 topic3)")
 		// logTriggerConfig, err := abi.Encode(map[string]interface{}{
 		// 	"contractAddress": upkeepAddr,
@@ -829,8 +830,9 @@ func TestIntegration_LogEventProvider(t *testing.T) {
 
 	lp.PollAndSaveLogs(ctx, int64(n))
 
-	logsRounds := 5
+	logsRounds := 10
 	polledCn := make(chan bool, logsRounds)
+	var latestBlock int64
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -839,6 +841,15 @@ func TestIntegration_LogEventProvider(t *testing.T) {
 
 		lctx, cancel := context.WithCancel(ctx)
 		defer cancel()
+
+		poll := func(blockHash common.Hash) {
+			b, err := ethClient.BlockByHash(lctx, blockHash)
+			require.NoError(t, err)
+			bn := b.Number()
+			lp.PollAndSaveLogs(lctx, bn.Int64())
+			atomic.StoreInt64(&latestBlock, bn.Int64())
+			polledCn <- true
+		}
 
 		var blockHash common.Hash
 		rounds := logsRounds
@@ -857,19 +868,9 @@ func TestIntegration_LogEventProvider(t *testing.T) {
 			if rounds%2 != 0 {
 				continue
 			}
-			b, err := ethClient.BlockByHash(lctx, blockHash)
-			require.NoError(t, err)
-			bn := b.Number()
-			lp.PollAndSaveLogs(lctx, bn.Int64())
-			polledCn <- true
-			lggr.Debugw("polled events", "block", bn.Int64())
+			poll(blockHash)
 		}
-		b, err := ethClient.BlockByHash(lctx, blockHash)
-		require.NoError(t, err)
-		bn := b.Number()
-		lp.PollAndSaveLogs(lctx, bn.Int64())
-		lggr.Debugw("polled events", "block", bn.Int64())
-		polledCn <- true
+		poll(blockHash)
 		// let it more time to get logs in the other goroutine before we close
 		<-time.After(time.Second)
 		polledCn <- false
@@ -888,19 +889,18 @@ func TestIntegration_LogEventProvider(t *testing.T) {
 				if !ok {
 					return
 				}
-				logs, err := logProvider.GetLogs(ctx, ids...)
-				require.NoError(t, err)
-				// lggr.Debugw("got logs", "logs", logs)
-				n := 0
-				for _, l := range logs {
-					n += len(l)
-				}
-				atomic.AddInt64(&collectedLogs, int64(n))
+				require.NoError(t, logProvider.FetchLogs(lctx, true, ids...))
+				go func() {
+					latest := atomic.LoadInt64(&latestBlock)
+					logs := logProvider.GetLogs(latest/2, latest)
+					lggr.Debugw("got logs", "logs", len(logs))
+					atomic.AddInt64(&collectedLogs, int64(len(logs)))
+				}()
 			}
 		}
 	}()
 
 	wg.Wait()
-
+	t.Logf("collected logs: %d", atomic.LoadInt64(&collectedLogs))
 	require.GreaterOrEqual(t, atomic.LoadInt64(&collectedLogs), int64(n), "didn't polled logs")
 }
