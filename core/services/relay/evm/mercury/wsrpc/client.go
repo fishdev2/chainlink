@@ -25,6 +25,12 @@ type Client interface {
 	pb.MercuryClient
 }
 
+type Conn interface {
+	WaitForReady(ctx context.Context) bool
+	GetState() connectivity.State
+	Close()
+}
+
 type client struct {
 	utils.StartStopOnce
 
@@ -33,7 +39,7 @@ type client struct {
 	serverURL    string
 
 	logger logger.Logger
-	conn   *wsrpc.ClientConn
+	conn   Conn
 	client pb.MercuryClient
 
 	consecutiveTimeoutCnt atomic.Int32
