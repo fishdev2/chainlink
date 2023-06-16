@@ -60,6 +60,7 @@ func newClient(lggr logger.Logger, clientPrivKey csakey.KeyV2, serverPubKey []by
 		serverURL:        serverURL,
 		logger:           lggr.Named("WSRPC"),
 		chResetTransport: make(chan struct{}, 1),
+		chStop:           make(chan struct{}),
 	}
 }
 
