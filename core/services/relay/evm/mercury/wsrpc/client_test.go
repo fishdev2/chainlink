@@ -20,10 +20,11 @@ func Test_Client_Transmit(t *testing.T) {
 
 	t.Run("sends on reset channel after MaxConsecutiveTransmitFailures timed out transmits", func(t *testing.T) {
 		calls := 0
+		transmitErr := context.DeadlineExceeded
 		wsrpcClient := &mocks.MockWSRPCClient{
 			TransmitF: func(ctx context.Context, in *pb.TransmitRequest) (*pb.TransmitResponse, error) {
 				calls++
-				return nil, context.DeadlineExceeded
+				return nil, transmitErr
 			},
 		}
 		conn := &mocks.MockConn{
@@ -51,8 +52,35 @@ func Test_Client_Transmit(t *testing.T) {
 		default:
 			t.Fatal("expected send on chResetTransport")
 		}
+
+		t.Run("successful transmit resets the counter", func(t *testing.T) {
+			transmitErr = nil
+			// working transmit to reset counter
+			_, err = c.Transmit(ctx, req)
+			require.NoError(t, err)
+			assert.Equal(t, 6, calls)
+			assert.Equal(t, 0, int(c.consecutiveTimeoutCnt.Load()))
+		})
+
+		t.Run("doesn't block in case channel is full", func(t *testing.T) {
+			transmitErr = context.DeadlineExceeded
+			c.chResetTransport = nil // simulate full channel
+			for i := 0; i < MaxConsecutiveTransmitFailures; i++ {
+				_, err := c.Transmit(ctx, req)
+				require.EqualError(t, err, "context deadline exceeded")
+			}
+		})
+	})
+
+	t.Run("recovers if server goes offline then comes back", func(t *testing.T) {
+		t.Fatal("TODO")
 	})
 }
-func Test_WSRPCClient_LatestReport(t *testing.T) {
+
+func Test_Client_resetTransport(t *testing.T) {
+	t.Fatal("TODO")
+}
+
+func Test_Client_LatestReport(t *testing.T) {
 	t.Fatal("TODO")
 }

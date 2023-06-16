@@ -125,13 +125,17 @@ func (w *client) resetTransport() {
 	for {
 		// Will block until successful dial, or context is canceled (i.e. on close)
 		if err := w.dial(ctx, wsrpc.WithBlock()); err != nil {
+			if ctx.Err() != nil {
+				w.logger.Debugw("ResetTransport exiting due to client Close", "err", err)
+				return
+			}
 			w.logger.Errorw("ResetTransport failed to redial", "err", err)
 			time.Sleep(b.Duration())
 		} else {
-			w.logger.Info("ResetTransport successfully redialled")
 			break
 		}
 	}
+	w.logger.Info("ResetTransport successfully redialled")
 }
 
 func (w *client) Close() error {
@@ -188,16 +192,26 @@ func (w *client) Transmit(ctx context.Context, req *pb.TransmitRequest) (resp *p
 		cnt := w.consecutiveTimeoutCnt.Add(1)
 		if cnt == MaxConsecutiveTransmitFailures {
 			w.logger.Errorf("Timed out on %d consecutive transmits, resetting transport", cnt)
-			// HACK: if we get 5+ request timeouts in a row, close
-			// and re-open the websocket connection. This *shouldn't* be
-			// necessary in theory (wsrpc should handle it for us) but it acts
-			// as a "belts and braces" approach to ensure we get a websocket
-			// connection back up and running again if it gets itself into a
-			// bad state
+			// NOTE: If we get 5+ request timeouts in a row, close and re-open
+			// the websocket connection.
+			//
+			// This *shouldn't* be necessary in theory (ideally, wsrpc would
+			// handle it for us) but it acts as a "belts and braces" approach
+			// to ensure we get a websocket connection back up and running
+			// again if it gets itself into a bad state.
 			select {
 			case w.chResetTransport <- struct{}{}:
 			default:
-				// TODO: how to handle the case where a reset is already happening? How can this even happen?
+				// This can happen if we had 5 consecutive timeouts, already
+				// sent a reset signal, then the connection started working
+				// again (resetting the count) then we got 5 additional
+				// failures before the runloop was able to close the bad
+				// connection.
+				//
+				// It should be safe to just ignore in this case.
+				//
+				// Debug log in case my reasoning is wrong.
+				w.logger.Debugf("Transport is resetting, cnt=%d", cnt)
 			}
 		}
 	} else {
