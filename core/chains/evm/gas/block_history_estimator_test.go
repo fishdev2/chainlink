@@ -64,9 +64,9 @@ func TestBlockHistoryEstimator_Start(t *testing.T) {
 	minGasPrice := assets.NewWeiI(1)
 	maxGasPrice := assets.NewWeiI(100)
 
-	cfg.EvmGasLimitMultiplierF = float32(1)
-	cfg.EvmMinGasPriceWeiF = minGasPrice
-	cfg.EvmMaxGasPriceWeiF = maxGasPrice
+	geCfg.LimitMultiplierF = float32(1)
+	geCfg.PriceMinF = minGasPrice
+	geCfg.PriceMaxF = maxGasPrice
 
 	bhCfg.BatchSizeF = batchSize
 	bhCfg.BlockDelayF = blockDelay
@@ -109,6 +109,8 @@ func TestBlockHistoryEstimator_Start(t *testing.T) {
 	t.Run("starts and loads partial history if fetch context times out", func(t *testing.T) {
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = true
+		geCfg.LimitMultiplierF = float32(1)
+		geCfg.PriceMinF = minGasPrice
 
 		bhCfg := newBlockHistoryConfig()
 		bhCfg.BatchSizeF = uint32(1)
@@ -117,9 +119,6 @@ func TestBlockHistoryEstimator_Start(t *testing.T) {
 		bhCfg.TransactionPercentileF = percentile
 
 		cfg := gas.NewMockConfig()
-		cfg.EvmGasLimitMultiplierF = float32(1)
-		cfg.EvmMinGasPriceWeiF = minGasPrice
-		geCfg.EIP1559DynamicFeesF = true
 		ethClient := evmtest.NewEthClientMockWithDefaultChain(t)
 
 		bhe := newBlockHistoryEstimator(t, ethClient, cfg, geCfg, bhCfg)
@@ -687,9 +686,6 @@ func TestBlockHistoryEstimator_FetchBlocksAndRecalculate_NoEIP1559(t *testing.T)
 
 	ethClient := evmtest.NewEthClientMockWithDefaultChain(t)
 	cfg := gas.NewMockConfig()
-	cfg.EvmMaxGasPriceWeiF = assets.NewWeiI(1000)
-	cfg.EvmMinGasPriceWeiF = assets.NewWeiI(0)
-
 	bhCfg := newBlockHistoryConfig()
 	bhCfg.BlockDelayF = uint16(0)
 	bhCfg.TransactionPercentileF = uint16(35)
@@ -698,6 +694,8 @@ func TestBlockHistoryEstimator_FetchBlocksAndRecalculate_NoEIP1559(t *testing.T)
 
 	geCfg := &gas.MockGasEstimatorConfig{}
 	geCfg.EIP1559DynamicFeesF = false
+	geCfg.PriceMaxF = assets.NewWeiI(1000)
+	geCfg.PriceMinF = assets.NewWeiI(0)
 
 	bhe := newBlockHistoryEstimator(t, ethClient, cfg, geCfg, bhCfg)
 
@@ -774,12 +772,12 @@ func TestBlockHistoryEstimator_Recalculate_NoEIP1559(t *testing.T) {
 		cfg := gas.NewMockConfig()
 		bhCfg := newBlockHistoryConfig()
 
-		cfg.EvmMaxGasPriceWeiF = maxGasPrice
-		cfg.EvmMinGasPriceWeiF = minGasPrice
 		bhCfg.TransactionPercentileF = uint16(35)
 
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = false
+		geCfg.PriceMaxF = maxGasPrice
+		geCfg.PriceMinF = minGasPrice
 
 		bhe := newBlockHistoryEstimator(t, ethClient, cfg, geCfg, bhCfg)
 
@@ -809,12 +807,12 @@ func TestBlockHistoryEstimator_Recalculate_NoEIP1559(t *testing.T) {
 		cfg := gas.NewMockConfig()
 		bhCfg := newBlockHistoryConfig()
 
-		cfg.EvmMaxGasPriceWeiF = maxGasPrice
-		cfg.EvmMinGasPriceWeiF = minGasPrice
 		bhCfg.TransactionPercentileF = uint16(35)
 
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = false
+		geCfg.PriceMaxF = maxGasPrice
+		geCfg.PriceMinF = minGasPrice
 
 		bhe := newBlockHistoryEstimator(t, ethClient, cfg, geCfg, bhCfg)
 
@@ -844,12 +842,12 @@ func TestBlockHistoryEstimator_Recalculate_NoEIP1559(t *testing.T) {
 		cfg := gas.NewMockConfig()
 		bhCfg := newBlockHistoryConfig()
 
-		cfg.EvmMaxGasPriceWeiF = maxGasPrice
-		cfg.EvmMinGasPriceWeiF = minGasPrice
 		bhCfg.TransactionPercentileF = uint16(100)
 
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = false
+		geCfg.PriceMaxF = maxGasPrice
+		geCfg.PriceMinF = minGasPrice
 
 		bhe := newBlockHistoryEstimator(t, ethClient, cfg, geCfg, bhCfg)
 
@@ -891,12 +889,12 @@ func TestBlockHistoryEstimator_Recalculate_NoEIP1559(t *testing.T) {
 		cfg := gas.NewMockConfig()
 		bhCfg := newBlockHistoryConfig()
 
-		cfg.EvmMaxGasPriceWeiF = maxGasPrice
-		cfg.EvmMinGasPriceWeiF = assets.NewWeiI(0)
 		bhCfg.TransactionPercentileF = uint16(50)
 
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = false
+		geCfg.PriceMaxF = maxGasPrice
+		geCfg.PriceMinF = assets.NewWeiI(0)
 
 		bhe := newBlockHistoryEstimator(t, ethClient, cfg, geCfg, bhCfg)
 
@@ -926,12 +924,12 @@ func TestBlockHistoryEstimator_Recalculate_NoEIP1559(t *testing.T) {
 		cfg := gas.NewMockConfig()
 		bhCfg := newBlockHistoryConfig()
 
-		cfg.EvmMaxGasPriceWeiF = maxGasPrice
-		cfg.EvmMinGasPriceWeiF = assets.NewWeiI(100)
 		bhCfg.TransactionPercentileF = uint16(50)
 
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = false
+		geCfg.PriceMaxF = maxGasPrice
+		geCfg.PriceMinF = assets.NewWeiI(100)
 
 		ibhe := newBlockHistoryEstimatorWithChainID(t, ethClient, cfg, geCfg, bhCfg, *chainID)
 		bhe := gas.BlockHistoryEstimatorFromInterface(ibhe)
@@ -964,12 +962,12 @@ func TestBlockHistoryEstimator_Recalculate_NoEIP1559(t *testing.T) {
 
 		reasonablyHugeGasPrice := assets.NewWeiI(1000).Mul(big.NewInt(math.MaxInt64))
 
-		cfg.EvmMaxGasPriceWeiF = reasonablyHugeGasPrice
-		cfg.EvmMinGasPriceWeiF = assets.NewWeiI(10)
 		bhCfg.TransactionPercentileF = uint16(50)
 
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = false
+		geCfg.PriceMaxF = reasonablyHugeGasPrice
+		geCfg.PriceMinF = assets.NewWeiI(10)
 
 		bhe := newBlockHistoryEstimator(t, ethClient, cfg, geCfg, bhCfg)
 
@@ -1009,12 +1007,12 @@ func TestBlockHistoryEstimator_Recalculate_NoEIP1559(t *testing.T) {
 		cfg := gas.NewMockConfig()
 		bhCfg := newBlockHistoryConfig()
 
-		cfg.EvmMaxGasPriceWeiF = maxGasPrice
-		cfg.EvmMinGasPriceWeiF = assets.NewWeiI(100)
 		bhCfg.TransactionPercentileF = uint16(50)
 
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = false
+		geCfg.PriceMaxF = maxGasPrice
+		geCfg.PriceMinF = assets.NewWeiI(100)
 
 		bhe := newBlockHistoryEstimator(t, ethClient, cfg, geCfg, bhCfg)
 
@@ -1093,13 +1091,13 @@ func TestBlockHistoryEstimator_Recalculate_EIP1559(t *testing.T) {
 		cfg := gas.NewMockConfig()
 		bhCfg := newBlockHistoryConfig()
 
-		cfg.EvmMaxGasPriceWeiF = maxGasPrice
-		cfg.EvmMinGasPriceWeiF = assets.NewWeiI(0)
-		cfg.EvmGasTipCapMinimumF = assets.NewWeiI(0)
 		bhCfg.TransactionPercentileF = uint16(35)
 
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = true
+		geCfg.PriceMaxF = maxGasPrice
+		geCfg.PriceMinF = assets.NewWeiI(0)
+		geCfg.TipCapMinF = assets.NewWeiI(0)
 
 		bhe := newBlockHistoryEstimator(t, ethClient, cfg, geCfg, bhCfg)
 
@@ -1131,13 +1129,13 @@ func TestBlockHistoryEstimator_Recalculate_EIP1559(t *testing.T) {
 		cfg := gas.NewMockConfig()
 		bhCfg := newBlockHistoryConfig()
 
-		cfg.EvmMaxGasPriceWeiF = maxGasPrice
-		cfg.EvmMinGasPriceWeiF = assets.NewWeiI(0)
-		cfg.EvmGasTipCapMinimumF = assets.NewWeiI(10)
 		bhCfg.TransactionPercentileF = uint16(35)
 
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = true
+		geCfg.PriceMaxF = maxGasPrice
+		geCfg.PriceMinF = assets.NewWeiI(0)
+		geCfg.TipCapMinF = assets.NewWeiI(10)
 
 		bhe := newBlockHistoryEstimator(t, ethClient, cfg, geCfg, bhCfg)
 
@@ -1169,13 +1167,13 @@ func TestBlockHistoryEstimator_Recalculate_EIP1559(t *testing.T) {
 		cfg := gas.NewMockConfig()
 		bhCfg := newBlockHistoryConfig()
 
-		cfg.EvmMaxGasPriceWeiF = maxGasPrice
-		cfg.EvmMinGasPriceWeiF = assets.NewWeiI(0)
-		cfg.EvmGasTipCapMinimumF = assets.NewWeiI(10)
 		bhCfg.TransactionPercentileF = uint16(95)
 
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = true
+		geCfg.PriceMaxF = maxGasPrice
+		geCfg.PriceMinF = assets.NewWeiI(0)
+		geCfg.TipCapMinF = assets.NewWeiI(10)
 
 		bhe := newBlockHistoryEstimator(t, ethClient, cfg, geCfg, bhCfg)
 
@@ -1217,13 +1215,13 @@ func TestBlockHistoryEstimator_Recalculate_EIP1559(t *testing.T) {
 		cfg := gas.NewMockConfig()
 		bhCfg := newBlockHistoryConfig()
 
-		cfg.EvmMaxGasPriceWeiF = maxGasPrice
-		cfg.EvmMinGasPriceWeiF = assets.NewWeiI(0)
-		cfg.EvmGasTipCapMinimumF = assets.NewWeiI(1)
 		bhCfg.TransactionPercentileF = uint16(35)
 
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = true
+		geCfg.PriceMaxF = maxGasPrice
+		geCfg.PriceMinF = assets.NewWeiI(0)
+		geCfg.TipCapMinF = assets.NewWeiI(1)
 
 		bhe := newBlockHistoryEstimator(t, ethClient, cfg, geCfg, bhCfg)
 
@@ -1253,13 +1251,13 @@ func TestBlockHistoryEstimator_Recalculate_EIP1559(t *testing.T) {
 		cfg := gas.NewMockConfig()
 		bhCfg := newBlockHistoryConfig()
 
-		cfg.EvmMaxGasPriceWeiF = maxGasPrice
-		cfg.EvmMinGasPriceWeiF = assets.NewWeiI(0)
-		cfg.EvmGasTipCapMinimumF = assets.NewWeiI(0)
 		bhCfg.TransactionPercentileF = uint16(35)
 
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = true
+		geCfg.PriceMaxF = maxGasPrice
+		geCfg.PriceMinF = assets.NewWeiI(0)
+		geCfg.TipCapMinF = assets.NewWeiI(0)
 
 		bhe := newBlockHistoryEstimator(t, ethClient, cfg, geCfg, bhCfg)
 
@@ -1300,44 +1298,44 @@ func TestBlockHistoryEstimator_IsUsable(t *testing.T) {
 	}
 	t.Run("returns false if transaction has 0 gas limit", func(t *testing.T) {
 		tx := evmtypes.Transaction{Type: 0x0, GasPrice: assets.NewWeiI(10), GasLimit: 0, Hash: utils.NewHash()}
-		assert.Equal(t, false, bhe.IsUsable(tx, block, cfg, logger.TestLogger(t)))
+		assert.Equal(t, false, bhe.IsUsable(tx, block, cfg.ChainType(), geCfg.PriceMin(), logger.TestLogger(t)))
 	})
 
 	t.Run("returns false if transaction gas limit is nil and tx type is 0x0", func(t *testing.T) {
 		tx := evmtypes.Transaction{Type: 0x0, GasPrice: nil, GasLimit: 42, Hash: utils.NewHash()}
-		assert.Equal(t, false, bhe.IsUsable(tx, block, cfg, logger.TestLogger(t)))
+		assert.Equal(t, false, bhe.IsUsable(tx, block, cfg.ChainType(), geCfg.PriceMin(), logger.TestLogger(t)))
 	})
 
 	t.Run("returns false if transaction is of type 0x7e only on Optimism", func(t *testing.T) {
 		cfg.ChainTypeF = "optimismBedrock"
 		tx := evmtypes.Transaction{Type: 0x7e, GasPrice: assets.NewWeiI(10), GasLimit: 42, Hash: utils.NewHash()}
-		assert.Equal(t, false, bhe.IsUsable(tx, block, cfg, logger.TestLogger(t)))
+		assert.Equal(t, false, bhe.IsUsable(tx, block, cfg.ChainType(), geCfg.PriceMin(), logger.TestLogger(t)))
 
 		cfg.ChainTypeF = ""
-		assert.Equal(t, true, bhe.IsUsable(tx, block, cfg, logger.TestLogger(t)))
+		assert.Equal(t, true, bhe.IsUsable(tx, block, cfg.ChainType(), geCfg.PriceMin(), logger.TestLogger(t)))
 	})
 
 	t.Run("returns false if transaction is of type 0x7c only on Celo", func(t *testing.T) {
 		cfg.ChainTypeF = "celo"
 		tx := evmtypes.Transaction{Type: 0x7c, GasPrice: assets.NewWeiI(10), GasLimit: 42, Hash: utils.NewHash()}
-		assert.Equal(t, false, bhe.IsUsable(tx, block, cfg, logger.TestLogger(t)))
+		assert.Equal(t, false, bhe.IsUsable(tx, block, cfg.ChainType(), geCfg.PriceMin(), logger.TestLogger(t)))
 
 		cfg.ChainTypeF = ""
-		assert.Equal(t, true, bhe.IsUsable(tx, block, cfg, logger.TestLogger(t)))
+		assert.Equal(t, true, bhe.IsUsable(tx, block, cfg.ChainType(), geCfg.PriceMin(), logger.TestLogger(t)))
 	})
 
 	t.Run("returns false if transaction has base fee higher than the gas price only on Celo", func(t *testing.T) {
 		cfg.ChainTypeF = "celo"
 		tx := evmtypes.Transaction{Type: 0x0, GasPrice: assets.NewWeiI(10), GasLimit: 42, Hash: utils.NewHash()}
-		assert.Equal(t, false, bhe.IsUsable(tx, block, cfg, logger.TestLogger(t)))
+		assert.Equal(t, false, bhe.IsUsable(tx, block, cfg.ChainType(), geCfg.PriceMin(), logger.TestLogger(t)))
 
 		tx2 := evmtypes.Transaction{Type: 0x2, MaxPriorityFeePerGas: assets.NewWeiI(200), MaxFeePerGas: assets.NewWeiI(250),
 			GasPrice: assets.NewWeiI(50), GasLimit: 42, Hash: utils.NewHash()}
-		assert.Equal(t, false, bhe.IsUsable(tx, block, cfg, logger.TestLogger(t)))
+		assert.Equal(t, false, bhe.IsUsable(tx, block, cfg.ChainType(), geCfg.PriceMin(), logger.TestLogger(t)))
 
 		cfg.ChainTypeF = ""
-		assert.Equal(t, true, bhe.IsUsable(tx, block, cfg, logger.TestLogger(t)))
-		assert.Equal(t, true, bhe.IsUsable(tx2, block, cfg, logger.TestLogger(t)))
+		assert.Equal(t, true, bhe.IsUsable(tx, block, cfg.ChainType(), geCfg.PriceMin(), logger.TestLogger(t)))
+		assert.Equal(t, true, bhe.IsUsable(tx2, block, cfg.ChainType(), geCfg.PriceMin(), logger.TestLogger(t)))
 	})
 }
 
@@ -1721,13 +1719,12 @@ func TestBlockHistoryEstimator_GetLegacyGas(t *testing.T) {
 	bhCfg.CheckInclusionBlocksF = uint16(0)
 	bhCfg.BlockHistorySizeF = uint16(8)
 
-	cfg.EvmGasLimitMultiplierF = float32(1)
 	maxGasPrice := assets.NewWeiI(1000000)
-	cfg.EvmMaxGasPriceWeiF = maxGasPrice
-	cfg.EvmMinGasPriceWeiF = assets.NewWeiI(0)
-
 	geCfg := &gas.MockGasEstimatorConfig{}
 	geCfg.EIP1559DynamicFeesF = false
+	geCfg.LimitMultiplierF = float32(1)
+	geCfg.PriceMaxF = maxGasPrice
+	geCfg.PriceMinF = assets.NewWeiI(0)
 
 	bhe := newBlockHistoryEstimator(t, nil, cfg, geCfg, bhCfg)
 
@@ -1768,9 +1765,9 @@ func TestBlockHistoryEstimator_GetLegacyGas(t *testing.T) {
 
 	cfg = gas.NewMockConfig()
 
-	cfg.EvmGasLimitMultiplierF = float32(1)
-	cfg.EvmMaxGasPriceWeiF = assets.NewWeiI(700)
-	cfg.EvmMinGasPriceWeiF = assets.NewWeiI(0)
+	geCfg.LimitMultiplierF = float32(1)
+	geCfg.PriceMaxF = assets.NewWeiI(700)
+	geCfg.PriceMinF = assets.NewWeiI(0)
 
 	geCfg.EIP1559DynamicFeesF = false
 
@@ -1805,12 +1802,11 @@ func TestBlockHistoryEstimator_UseDefaultPriceAsFallback(t *testing.T) {
 		bhCfg.BlockDelayF = blockDelay
 		bhCfg.BlockHistorySizeF = historySize
 
-		cfg.EvmGasLimitMultiplierF = float32(1)
-		cfg.EvmMaxGasPriceWeiF = assets.NewWeiI(1000000)
-		cfg.EvmGasPriceDefaultF = assets.NewWeiI(100)
-
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = false
+		geCfg.LimitMultiplierF = float32(1)
+		geCfg.PriceMaxF = assets.NewWeiI(1000000)
+		geCfg.PriceDefaultF = assets.NewWeiI(100)
 
 		ethClient := evmtest.NewEthClientMockWithDefaultChain(t)
 		bhe := newBlockHistoryEstimator(t, ethClient, cfg, geCfg, bhCfg)
@@ -1844,7 +1840,7 @@ func TestBlockHistoryEstimator_UseDefaultPriceAsFallback(t *testing.T) {
 
 		fee, limit, err := bhe.GetLegacyGas(testutils.Context(t), make([]byte, 0), 10000, assets.NewWeiI(800))
 		require.NoError(t, err)
-		require.Equal(t, cfg.EvmGasPriceDefault(), fee)
+		require.Equal(t, geCfg.PriceDefault(), fee)
 		assert.Equal(t, 10000, int(limit))
 	})
 
@@ -1856,13 +1852,13 @@ func TestBlockHistoryEstimator_UseDefaultPriceAsFallback(t *testing.T) {
 		bhCfg.BlockDelayF = blockDelay
 		bhCfg.BlockHistorySizeF = historySize
 		bhCfg.EIP1559FeeCapBufferBlocksF = uint16(4)
-		cfg.EvmGasLimitMultiplierF = float32(1)
-		cfg.EvmMaxGasPriceWeiF = assets.NewWeiI(1000000)
-		cfg.EvmGasPriceDefaultF = assets.NewWeiI(100)
-		cfg.EvmGasTipCapDefaultF = assets.NewWeiI(50)
-		cfg.EvmGasBumpThresholdF = uint64(1)
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = true
+		geCfg.LimitMultiplierF = float32(1)
+		geCfg.PriceMaxF = assets.NewWeiI(1000000)
+		geCfg.PriceDefaultF = assets.NewWeiI(100)
+		geCfg.TipCapDefaultF = assets.NewWeiI(50)
+		geCfg.BumpThresholdF = uint64(1)
 
 		ethClient := evmtest.NewEthClientMockWithDefaultChain(t)
 		bhe := newBlockHistoryEstimator(t, ethClient, cfg, geCfg, bhCfg)
@@ -1896,7 +1892,7 @@ func TestBlockHistoryEstimator_UseDefaultPriceAsFallback(t *testing.T) {
 		fee, limit, err := bhe.GetDynamicFee(testutils.Context(t), 100000, assets.NewWeiI(200))
 		require.NoError(t, err)
 
-		assert.Equal(t, gas.DynamicFee{FeeCap: assets.NewWeiI(114), TipCap: cfg.EvmGasTipCapDefault()}, fee)
+		assert.Equal(t, gas.DynamicFee{FeeCap: assets.NewWeiI(114), TipCap: geCfg.TipCapDefault()}, fee)
 		assert.Equal(t, 100000, int(limit))
 	})
 }
@@ -1909,12 +1905,12 @@ func TestBlockHistoryEstimator_GetDynamicFee(t *testing.T) {
 	maxGasPrice := assets.NewWeiI(1000000)
 	bhCfg.EIP1559FeeCapBufferBlocksF = uint16(4)
 	bhCfg.TransactionPercentileF = uint16(35)
-	cfg.EvmGasLimitMultiplierF = float32(1)
-	cfg.EvmMaxGasPriceWeiF = maxGasPrice
-	cfg.EvmGasTipCapMinimumF = assets.NewWeiI(0)
-	cfg.EvmMinGasPriceWeiF = assets.NewWeiI(0)
 	geCfg := &gas.MockGasEstimatorConfig{}
 	geCfg.EIP1559DynamicFeesF = true
+	geCfg.LimitMultiplierF = float32(1)
+	geCfg.PriceMaxF = maxGasPrice
+	geCfg.TipCapMinF = assets.NewWeiI(0)
+	geCfg.PriceMinF = assets.NewWeiI(0)
 
 	bhe := newBlockHistoryEstimator(t, nil, cfg, geCfg, bhCfg)
 
@@ -1938,7 +1934,7 @@ func TestBlockHistoryEstimator_GetDynamicFee(t *testing.T) {
 	gas.SimulateStart(t, bhe)
 
 	t.Run("if estimator is missing base fee and gas bumping is enabled", func(t *testing.T) {
-		cfg.EvmGasBumpThresholdF = uint64(1)
+		geCfg.BumpThresholdF = uint64(1)
 
 		_, _, err := bhe.GetDynamicFee(testutils.Context(t), 100000, maxGasPrice)
 		require.Error(t, err)
@@ -1946,7 +1942,7 @@ func TestBlockHistoryEstimator_GetDynamicFee(t *testing.T) {
 	})
 
 	t.Run("if estimator is missing base fee and gas bumping is disabled", func(t *testing.T) {
-		cfg.EvmGasBumpThresholdF = uint64(0)
+		geCfg.BumpThresholdF = uint64(0)
 
 		fee, limit, err := bhe.GetDynamicFee(testutils.Context(t), 100000, maxGasPrice)
 		require.NoError(t, err)
@@ -1959,7 +1955,7 @@ func TestBlockHistoryEstimator_GetDynamicFee(t *testing.T) {
 	bhe.OnNewLongestChain(testutils.Context(t), h)
 
 	t.Run("if gas bumping is enabled", func(t *testing.T) {
-		cfg.EvmGasBumpThresholdF = uint64(1)
+		geCfg.BumpThresholdF = uint64(1)
 
 		fee, limit, err := bhe.GetDynamicFee(testutils.Context(t), 100000, maxGasPrice)
 		require.NoError(t, err)
@@ -1969,7 +1965,7 @@ func TestBlockHistoryEstimator_GetDynamicFee(t *testing.T) {
 	})
 
 	t.Run("if gas bumping is disabled", func(t *testing.T) {
-		cfg.EvmGasBumpThresholdF = uint64(0)
+		geCfg.BumpThresholdF = uint64(0)
 
 		fee, limit, err := bhe.GetDynamicFee(testutils.Context(t), 100000, maxGasPrice)
 		require.NoError(t, err)
@@ -1979,7 +1975,7 @@ func TestBlockHistoryEstimator_GetDynamicFee(t *testing.T) {
 	})
 
 	t.Run("if gas bumping is enabled and local max gas price set", func(t *testing.T) {
-		cfg.EvmGasBumpThresholdF = uint64(1)
+		geCfg.BumpThresholdF = uint64(1)
 
 		fee, limit, err := bhe.GetDynamicFee(testutils.Context(t), 100000, assets.NewWeiI(180000))
 		require.NoError(t, err)
@@ -1989,7 +1985,7 @@ func TestBlockHistoryEstimator_GetDynamicFee(t *testing.T) {
 	})
 
 	t.Run("if bump threshold is 0 and local max gas price set", func(t *testing.T) {
-		cfg.EvmGasBumpThresholdF = uint64(0)
+		geCfg.BumpThresholdF = uint64(0)
 
 		fee, limit, err := bhe.GetDynamicFee(testutils.Context(t), 100000, assets.NewWeiI(100))
 		require.NoError(t, err)
@@ -2003,7 +1999,7 @@ func TestBlockHistoryEstimator_GetDynamicFee(t *testing.T) {
 	bhe.OnNewLongestChain(testutils.Context(t), h)
 
 	t.Run("if gas bumping is enabled and global max gas price lower than local max gas price", func(t *testing.T) {
-		cfg.EvmGasBumpThresholdF = uint64(1)
+		geCfg.BumpThresholdF = uint64(1)
 
 		fee, limit, err := bhe.GetDynamicFee(testutils.Context(t), 100000, assets.NewWeiI(1200000))
 		require.NoError(t, err)
@@ -2315,12 +2311,12 @@ func TestBlockHistoryEstimator_Bumps(t *testing.T) {
 		cfg := gas.NewMockConfig()
 		bhCfg.CheckInclusionBlocksF = 1
 		bhCfg.CheckInclusionPercentileF = 10
-		cfg.EvmGasBumpPercentF = 10
-		cfg.EvmGasBumpWeiF = assets.NewWeiI(150)
-		cfg.EvmMaxGasPriceWeiF = maxGasPrice
-		cfg.EvmGasLimitMultiplierF = float32(1.1)
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = false
+		geCfg.BumpPercentF = 10
+		geCfg.BumpMinF = assets.NewWeiI(150)
+		geCfg.PriceMaxF = maxGasPrice
+		geCfg.LimitMultiplierF = float32(1.1)
 
 		bhe := newBlockHistoryEstimator(t, nil, cfg, geCfg, bhCfg)
 
@@ -2345,12 +2341,12 @@ func TestBlockHistoryEstimator_Bumps(t *testing.T) {
 
 	t.Run("BumpLegacyGas calls BumpLegacyGasPriceOnly with proper current gas price", func(t *testing.T) {
 		cfg := gas.NewMockConfig()
-		cfg.EvmGasBumpPercentF = 10
-		cfg.EvmGasBumpWeiF = assets.NewWeiI(150)
-		cfg.EvmMaxGasPriceWeiF = maxGasPrice
-		cfg.EvmGasLimitMultiplierF = float32(1.1)
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = false
+		geCfg.BumpPercentF = 10
+		geCfg.BumpMinF = assets.NewWeiI(150)
+		geCfg.PriceMaxF = maxGasPrice
+		geCfg.LimitMultiplierF = float32(1.1)
 
 		bhe := newBlockHistoryEstimator(t, nil, cfg, geCfg, bhCfg)
 
@@ -2358,7 +2354,7 @@ func TestBlockHistoryEstimator_Bumps(t *testing.T) {
 			gasPrice, gasLimit, err := bhe.BumpLegacyGas(testutils.Context(t), assets.NewWeiI(42), 100000, maxGasPrice, nil)
 			require.NoError(t, err)
 
-			expectedGasPrice, expectedGasLimit, err := gas.BumpLegacyGasPriceOnly(cfg, logger.TestLogger(t), nil, assets.NewWeiI(42), 100000, maxGasPrice)
+			expectedGasPrice, expectedGasLimit, err := gas.BumpLegacyGasPriceOnly(geCfg, logger.TestLogger(t), nil, assets.NewWeiI(42), 100000, maxGasPrice)
 			require.NoError(t, err)
 
 			assert.Equal(t, expectedGasLimit, gasLimit)
@@ -2372,7 +2368,7 @@ func TestBlockHistoryEstimator_Bumps(t *testing.T) {
 			massive := assets.NewWeiI(100000000000000)
 			gas.SetGasPrice(bhe, massive)
 
-			expectedGasPrice, expectedGasLimit, err := gas.BumpLegacyGasPriceOnly(cfg, logger.TestLogger(t), massive, assets.NewWeiI(42), 100000, maxGasPrice)
+			expectedGasPrice, expectedGasLimit, err := gas.BumpLegacyGasPriceOnly(geCfg, logger.TestLogger(t), massive, assets.NewWeiI(42), 100000, maxGasPrice)
 			require.NoError(t, err)
 
 			assert.Equal(t, expectedGasLimit, gasLimit)
@@ -2427,12 +2423,12 @@ func TestBlockHistoryEstimator_Bumps(t *testing.T) {
 		bhCfg := newBlockHistoryConfig()
 		bhCfg.CheckInclusionBlocksF = 1
 		bhCfg.CheckInclusionPercentileF = 10
-		cfg.EvmGasBumpPercentF = 10
-		cfg.EvmGasBumpWeiF = assets.NewWeiI(150)
-		cfg.EvmMaxGasPriceWeiF = maxGasPrice
-		cfg.EvmGasLimitMultiplierF = float32(1.1)
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = true
+		geCfg.BumpPercentF = 10
+		geCfg.BumpMinF = assets.NewWeiI(150)
+		geCfg.PriceMaxF = maxGasPrice
+		geCfg.LimitMultiplierF = float32(1.1)
 
 		bhe := newBlockHistoryEstimator(t, nil, cfg, geCfg, bhCfg)
 
@@ -2458,15 +2454,15 @@ func TestBlockHistoryEstimator_Bumps(t *testing.T) {
 
 	t.Run("BumpDynamicFee bumps the fee", func(t *testing.T) {
 		cfg := gas.NewMockConfig()
-		cfg.EvmGasBumpPercentF = 10
-		cfg.EvmGasBumpWeiF = assets.NewWeiI(150)
-		cfg.EvmMaxGasPriceWeiF = maxGasPrice
-		cfg.EvmGasLimitMultiplierF = float32(1.1)
-		cfg.EvmGasTipCapDefaultF = assets.NewWeiI(52)
 		bhCfg := newBlockHistoryConfig()
 
 		geCfg := &gas.MockGasEstimatorConfig{}
 		geCfg.EIP1559DynamicFeesF = true
+		geCfg.BumpPercentF = 10
+		geCfg.BumpMinF = assets.NewWeiI(150)
+		geCfg.PriceMaxF = maxGasPrice
+		geCfg.LimitMultiplierF = float32(1.1)
+		geCfg.TipCapDefaultF = assets.NewWeiI(52)
 
 		bhe := newBlockHistoryEstimator(t, nil, cfg, geCfg, bhCfg)
 

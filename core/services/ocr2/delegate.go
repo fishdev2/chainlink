@@ -682,7 +682,7 @@ func (d *Delegate) newServicesOCR2VRF(
 	reasonableGasPrice := reasonablegasprice.NewReasonableGasPriceProvider(
 		chain.GasEstimator(),
 		timeout,
-		chain.Config().EvmMaxGasPriceWei(),
+		chain.Config().EVM().GasEstimator().PriceMax(),
 		chain.Config().EVM().GasEstimator().EIP1559DynamicFees(),
 	)
 

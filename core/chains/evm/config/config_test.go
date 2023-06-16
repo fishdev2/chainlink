@@ -48,17 +48,17 @@ func TestChainScopedConfig(t *testing.T) {
 			}),
 		}
 	}
-	t.Run("EvmGasPriceDefault", func(t *testing.T) {
-		assert.Equal(t, assets.NewWeiI(20000000000), cfg.EvmGasPriceDefault())
+	t.Run("EVM().GasEstimator().PriceDefault()", func(t *testing.T) {
+		assert.Equal(t, assets.NewWeiI(20000000000), cfg.EVM().GasEstimator().PriceDefault())
 
 		gcfg2 := configtest.NewGeneralConfig(t, overrides)
 		cfg2 := evmtest.NewChainScopedConfig(t, gcfg2)
-		assert.Equal(t, assets.NewWeiI(42000000000), cfg2.EvmGasPriceDefault())
+		assert.Equal(t, assets.NewWeiI(42000000000), cfg2.EVM().GasEstimator().PriceDefault())
 	})
 
 	t.Run("EvmGasBumpTxDepthDefault", func(t *testing.T) {
 		t.Run("uses MaxInFlightTransactions when not set", func(t *testing.T) {
-			assert.Equal(t, cfg.EVM().Transactions().MaxInFlight(), cfg.EvmGasBumpTxDepth())
+			assert.Equal(t, cfg.EVM().Transactions().MaxInFlight(), cfg.EVM().GasEstimator().BumpTxDepth())
 		})
 
 		t.Run("uses customer configured value when set", func(t *testing.T) {
@@ -76,8 +76,8 @@ func TestChainScopedConfig(t *testing.T) {
 			}
 			gcfg2 := configtest.NewGeneralConfig(t, gasBumpOverrides)
 			cfg2 := evmtest.NewChainScopedConfig(t, gcfg2)
-			assert.NotEqual(t, cfg2.EVM().Transactions().MaxInFlight(), cfg2.EvmGasBumpTxDepth())
-			assert.Equal(t, override, cfg2.EvmGasBumpTxDepth())
+			assert.NotEqual(t, cfg2.EVM().Transactions().MaxInFlight(), cfg2.EVM().GasEstimator().BumpTxDepth())
+			assert.Equal(t, override, cfg2.EVM().GasEstimator().BumpTxDepth())
 		})
 	})
 
@@ -317,12 +317,12 @@ func TestChainScopedConfig_Profiles(t *testing.T) {
 			})
 			config := evmtest.NewChainScopedConfig(t, gcfg)
 
-			assert.Equal(t, tt.expectedGasLimitDefault, config.EvmGasLimitDefault())
-			assert.Nil(t, config.EvmGasLimitOCRJobType())
-			assert.Nil(t, config.EvmGasLimitDRJobType())
-			assert.Nil(t, config.EvmGasLimitVRFJobType())
-			assert.Nil(t, config.EvmGasLimitFMJobType())
-			assert.Nil(t, config.EvmGasLimitKeeperJobType())
+			assert.Equal(t, tt.expectedGasLimitDefault, config.EVM().GasEstimator().LimitDefault())
+			assert.Nil(t, config.EVM().GasEstimator().LimitJobType().OCR())
+			assert.Nil(t, config.EVM().GasEstimator().LimitJobType().DR())
+			assert.Nil(t, config.EVM().GasEstimator().LimitJobType().VRF())
+			assert.Nil(t, config.EVM().GasEstimator().LimitJobType().FM())
+			assert.Nil(t, config.EVM().GasEstimator().LimitJobType().Keeper())
 			assert.Equal(t, tt.expectedMinimumContractPayment, strings.TrimRight(config.MinimumContractPayment().Link(), "0"))
 		})
 	}

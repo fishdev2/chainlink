@@ -17,21 +17,21 @@ import (
 type Config interface {
 	ChainType() coreconfig.ChainType
 	EvmFinalityDepth() uint32
-	EvmGasBumpPercent() uint16
-	EvmGasBumpThreshold() uint64
-	EvmGasBumpTxDepth() uint32
-	EvmGasLimitDefault() uint32
-	EvmGasPriceDefault() *assets.Wei
-	EvmGasTipCapMinimum() *assets.Wei
-	EvmMaxGasPriceWei() *assets.Wei
-	EvmMinGasPriceWei() *assets.Wei
 	EvmNonceAutoSync() bool
 	EvmRPCDefaultBatchSize() uint32
 	KeySpecificMaxGasPriceWei(addr common.Address) *assets.Wei
 }
 
-type GasEstimatorConfig interface {
+type FeeConfig interface {
 	EIP1559DynamicFees() bool
+	BumpPercent() uint16
+	BumpThreshold() uint64
+	BumpTxDepth() uint32
+	LimitDefault() uint32
+	PriceDefault() *assets.Wei
+	TipCapMin() *assets.Wei
+	PriceMax() *assets.Wei
+	PriceMin() *assets.Wei
 }
 
 type DatabaseConfig interface {
@@ -45,6 +45,7 @@ type ListenerConfig interface {
 
 type (
 	EvmTxmConfig         txmgrtypes.TransactionManagerConfig
+	EvmTxmFeeConfig      txmgrtypes.TransactionManagerFeeConfig
 	EvmBroadcasterConfig txmgrtypes.BroadcasterConfig
 	EvmConfirmerConfig   txmgrtypes.ConfirmerConfig
 	EvmResenderConfig    txmgrtypes.ResenderConfig
@@ -65,18 +66,28 @@ func (c evmTxmConfig) SequenceAutoSync() bool { return c.EvmNonceAutoSync() }
 
 func (c evmTxmConfig) IsL2() bool { return c.ChainType().IsL2() }
 
-func (c evmTxmConfig) MaxFeePrice() string { return c.EvmMaxGasPriceWei().String() }
-
-func (c evmTxmConfig) FeePriceDefault() string { return c.EvmGasPriceDefault().String() }
-
 func (c evmTxmConfig) RPCDefaultBatchSize() uint32 { return c.EvmRPCDefaultBatchSize() }
-
-func (c evmTxmConfig) FeeBumpTxDepth() uint32 { return c.EvmGasBumpTxDepth() }
-
-func (c evmTxmConfig) FeeLimitDefault() uint32 { return c.EvmGasLimitDefault() }
-
-func (c evmTxmConfig) FeeBumpThreshold() uint64 { return c.EvmGasBumpThreshold() }
 
 func (c evmTxmConfig) FinalityDepth() uint32 { return c.EvmFinalityDepth() }
 
-func (c evmTxmConfig) FeeBumpPercent() uint16 { return c.EvmGasBumpPercent() }
+var _ EvmTxmFeeConfig = (*evmTxmFeeConfig)(nil)
+
+type evmTxmFeeConfig struct {
+	FeeConfig
+}
+
+func NewEvmTxmFeeConfig(c FeeConfig) *evmTxmFeeConfig {
+	return &evmTxmFeeConfig{c}
+}
+
+func (c evmTxmFeeConfig) MaxFeePrice() string { return c.PriceMax().String() }
+
+func (c evmTxmFeeConfig) FeePriceDefault() string { return c.PriceDefault().String() }
+
+func (c evmTxmFeeConfig) FeeBumpTxDepth() uint32 { return c.BumpTxDepth() }
+
+func (c evmTxmFeeConfig) FeeLimitDefault() uint32 { return c.LimitDefault() }
+
+func (c evmTxmFeeConfig) FeeBumpThreshold() uint64 { return c.BumpThreshold() }
+
+func (c evmTxmFeeConfig) FeeBumpPercent() uint16 { return c.BumpPercent() }

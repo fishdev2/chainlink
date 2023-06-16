@@ -32,11 +32,11 @@ func newEvmTxm(
 
 	lggr = lggr.Named("Txm")
 	lggr.Infow("Initializing EVM transaction manager",
-		"gasBumpTxDepth", cfg.EvmGasBumpTxDepth(),
+		"bumpTxDepth", cfg.EVM().GasEstimator().BumpTxDepth(),
 		"maxInFlightTransactions", cfg.EVM().Transactions().MaxInFlight(),
 		"maxQueuedTransactions", cfg.EVM().Transactions().MaxQueued(),
 		"nonceAutoSync", cfg.EvmNonceAutoSync(),
-		"gasLimitDefault", cfg.EvmGasLimitDefault(),
+		"limitDefault", cfg.EVM().GasEstimator().LimitDefault(),
 	)
 
 	// build estimator from factory
@@ -50,7 +50,7 @@ func newEvmTxm(
 		txm, err = txmgr.NewTxm(
 			db,
 			cfg,
-			cfg.EVM().GasEstimator(),
+			txmgr.NewEvmTxmFeeConfig(cfg.EVM().GasEstimator()),
 			cfg.EVM().Transactions(),
 			cfg.Database(),
 			cfg.Database().Listener(),

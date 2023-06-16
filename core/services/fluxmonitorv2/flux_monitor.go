@@ -156,6 +156,7 @@ func NewFromJobSpec(
 	logBroadcaster log.Broadcaster,
 	pipelineRunner pipeline.Runner,
 	cfg Config,
+	egcfg EvmGasEstimatorConfig,
 	ecfg EvmTransactionsConfig,
 	fmcfg FluxMonitorConfig,
 	jcfg JobPipelineConfig,
@@ -182,11 +183,12 @@ func NewFromJobSpec(
 		return nil, err
 	}
 
-	gasLimit := cfg.EvmGasLimitDefault()
+	gasLimit := egcfg.LimitDefault()
+	fmLimit := egcfg.LimitJobType().FM()
 	if jobSpec.GasLimit.Valid {
 		gasLimit = jobSpec.GasLimit.Uint32
-	} else if cfg.EvmGasLimitFMJobType() != nil {
-		gasLimit = *cfg.EvmGasLimitFMJobType()
+	} else if fmLimit != nil {
+		gasLimit = *fmLimit
 	}
 
 	contractSubmitter := NewFluxAggregatorContractSubmitter(

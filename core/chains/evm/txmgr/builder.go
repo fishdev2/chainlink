@@ -23,7 +23,7 @@ import (
 func NewTxm(
 	db *sqlx.DB,
 	cfg Config,
-	gCfg GasConfig,
+	gCfg FeeConfig,
 	txConfig config.Transactions,
 	dbConfig DatabaseConfig,
 	listenerConfig ListenerConfig,
@@ -50,9 +50,10 @@ func NewTxm(
 	txNonceSyncer := NewNonceSyncer(txStore, lggr, client, keyStore)
 
 	txmCfg := NewEvmTxmConfig(cfg)       // wrap Evm specific config
+	feeCfg := NewEvmTxmFeeConfig(gCfg)   // wrap Evm specific config
 	txmClient := NewEvmTxmClient(client) // wrap Evm specific client
-	ethBroadcaster := NewEvmBroadcaster(txStore, txmClient, txmCfg, txConfig, listenerConfig, keyStore, eventBroadcaster, txAttemptBuilder, txNonceSyncer, lggr, checker, cfg.EvmNonceAutoSync())
-	ethConfirmer := NewEvmConfirmer(txStore, txmClient, txmCfg, txConfig, dbConfig, keyStore, txAttemptBuilder, lggr)
+	ethBroadcaster := NewEvmBroadcaster(txStore, txmClient, txmCfg, feeCfg, txConfig, listenerConfig, keyStore, eventBroadcaster, txAttemptBuilder, txNonceSyncer, lggr, checker, cfg.EvmNonceAutoSync())
+	ethConfirmer := NewEvmConfirmer(txStore, txmClient, txmCfg, feeCfg, txConfig, dbConfig, keyStore, txAttemptBuilder, lggr)
 	var ethResender *EvmResender
 	if txConfig.ResendAfterThreshold() > 0 {
 		ethResender = NewEvmResender(lggr, txStore, txmClient, keyStore, txmgr.DefaultResenderPollInterval, txmCfg, txConfig)
@@ -103,13 +104,14 @@ func NewEvmConfirmer(
 	txStore TxStore,
 	evmClient EvmTxmClient,
 	config txmgrtypes.ConfirmerConfig,
+	feeConfig txmgrtypes.ConfirmerFeeConfig,
 	txConfig txmgrtypes.ConfirmerTransactionsConfig,
 	dbConfig txmgrtypes.ConfirmerDatabaseConfig,
 	keystore EvmKeyStore,
 	txAttemptBuilder EvmTxAttemptBuilder,
 	lggr logger.Logger,
 ) *EvmConfirmer {
-	return txmgr.NewConfirmer(txStore, evmClient, config, txConfig, dbConfig, keystore, txAttemptBuilder, lggr, func(r *evmtypes.Receipt) bool { return r == nil })
+	return txmgr.NewConfirmer(txStore, evmClient, config, feeConfig, txConfig, dbConfig, keystore, txAttemptBuilder, lggr, func(r *evmtypes.Receipt) bool { return r == nil })
 }
 
 // NewEvmBroadcaster returns a new concrete EvmBroadcaster
@@ -117,6 +119,7 @@ func NewEvmBroadcaster(
 	txStore TxStore,
 	evmClient EvmTxmClient,
 	config txmgrtypes.BroadcasterConfig,
+	feeConfig txmgrtypes.BroadcasterFeeConfig,
 	txConfig txmgrtypes.BroadcasterTransactionsConfig,
 	listenerConfig txmgrtypes.BroadcasterListenerConfig,
 	keystore EvmKeyStore,
@@ -127,5 +130,5 @@ func NewEvmBroadcaster(
 	checkerFactory EvmTransmitCheckerFactory,
 	autoSyncNonce bool,
 ) *EvmBroadcaster {
-	return txmgr.NewBroadcaster(txStore, evmClient, config, txConfig, listenerConfig, keystore, eventBroadcaster, txAttemptBuilder, nonceSyncer, logger, checkerFactory, autoSyncNonce, stringToGethAddress)
+	return txmgr.NewBroadcaster(txStore, evmClient, config, feeConfig, txConfig, listenerConfig, keystore, eventBroadcaster, txAttemptBuilder, nonceSyncer, logger, checkerFactory, autoSyncNonce, stringToGethAddress)
 }

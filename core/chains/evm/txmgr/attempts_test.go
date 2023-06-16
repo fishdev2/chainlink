@@ -33,9 +33,20 @@ func NewEvmAddress() gethcommon.Address {
 
 type gasConfig struct {
 	eip1559DynamicFees bool
+	tipCapMin          *assets.Wei
+	priceMin           *assets.Wei
+}
+
+func newGasConfig() *gasConfig {
+	return &gasConfig{
+		tipCapMin: assets.NewWeiI(0),
+		priceMin:  assets.NewWeiI(0),
+	}
 }
 
 func (g *gasConfig) EIP1559DynamicFees() bool { return g.eip1559DynamicFees }
+func (g *gasConfig) TipCapMin() *assets.Wei   { return g.tipCapMin }
+func (g *gasConfig) PriceMin() *assets.Wei    { return g.priceMin }
 
 func TestTxm_SignTx(t *testing.T) {
 	t.Parallel()
@@ -56,7 +67,7 @@ func TestTxm_SignTx(t *testing.T) {
 		cfg := txmmocks.NewConfig(t)
 		kst := ksmocks.NewEth(t)
 		kst.On("SignTx", to, tx, chainID).Return(tx, nil).Once()
-		cks := txmgr.NewEvmTxAttemptBuilder(*chainID, cfg, &gasConfig{}, kst, nil)
+		cks := txmgr.NewEvmTxAttemptBuilder(*chainID, cfg, newGasConfig(), kst, nil)
 		hash, rawBytes, err := cks.SignTx(addr, tx)
 		require.NoError(t, err)
 		require.NotNil(t, rawBytes)
@@ -68,7 +79,7 @@ func TestTxm_SignTx(t *testing.T) {
 		cfg := txmmocks.NewConfig(t)
 		kst := ksmocks.NewEth(t)
 		kst.On("SignTx", to, tx, chainID).Return(tx, nil).Once()
-		cks := txmgr.NewEvmTxAttemptBuilder(*chainID, cfg, &gasConfig{}, kst, nil)
+		cks := txmgr.NewEvmTxAttemptBuilder(*chainID, cfg, newGasConfig(), kst, nil)
 		hash, rawBytes, err := cks.SignTx(addr, tx)
 		require.NoError(t, err)
 		require.NotNil(t, rawBytes)
@@ -87,7 +98,7 @@ func TestTxm_NewDynamicFeeTx(t *testing.T) {
 	t.Run("creates attempt with fields", func(t *testing.T) {
 		gcfg := configtest.NewGeneralConfig(t, nil)
 		cfg := evmtest.NewChainScopedConfig(t, gcfg)
-		cks := txmgr.NewEvmTxAttemptBuilder(*big.NewInt(1), cfg, &gasConfig{}, kst, nil)
+		cks := txmgr.NewEvmTxAttemptBuilder(*big.NewInt(1), cfg, newGasConfig(), kst, nil)
 		dynamicFee := gas.DynamicFee{TipCap: assets.GWei(100), FeeCap: assets.GWei(200)}
 		a, _, err := cks.NewCustomTxAttempt(txmgr.EvmTx{Sequence: &n, FromAddress: addr}, gas.EvmFee{
 			DynamicTipCap: dynamicFee.TipCap,
@@ -129,7 +140,7 @@ func TestTxm_NewDynamicFeeTx(t *testing.T) {
 			t.Run(test.name, func(t *testing.T) {
 				gcfg := configtest.NewGeneralConfig(t, test.setCfg)
 				cfg := evmtest.NewChainScopedConfig(t, gcfg)
-				cks := txmgr.NewEvmTxAttemptBuilder(*big.NewInt(1), cfg, &gasConfig{}, kst, nil)
+				cks := txmgr.NewEvmTxAttemptBuilder(*big.NewInt(1), cfg, cfg.EVM().GasEstimator(), kst, nil)
 				dynamicFee := gas.DynamicFee{TipCap: test.tipcap, FeeCap: test.feecap}
 				_, _, err := cks.NewCustomTxAttempt(txmgr.EvmTx{Sequence: &n, FromAddress: addr}, gas.EvmFee{
 					DynamicTipCap: dynamicFee.TipCap,
@@ -149,13 +160,14 @@ func TestTxm_NewLegacyAttempt(t *testing.T) {
 	addr := NewEvmAddress()
 	gcfg := configtest.NewGeneralConfig(t, func(c *chainlink.Config, s *chainlink.Secrets) {
 		c.EVM[0].GasEstimator.PriceMax = assets.NewWeiI(50)
-		c.EVM[0].GasEstimator.PriceMin = assets.NewWeiI(10)
 	})
 	cfg := evmtest.NewChainScopedConfig(t, gcfg)
 	kst := ksmocks.NewEth(t)
 	tx := types.NewTx(&types.LegacyTx{})
 	kst.On("SignTx", addr, mock.Anything, big.NewInt(1)).Return(tx, nil)
-	cks := txmgr.NewEvmTxAttemptBuilder(*big.NewInt(1), cfg, &gasConfig{}, kst, nil)
+	gc := newGasConfig()
+	gc.priceMin = assets.NewWeiI(10)
+	cks := txmgr.NewEvmTxAttemptBuilder(*big.NewInt(1), cfg, gc, kst, nil)
 	lggr := logger.TestLogger(t)
 
 	t.Run("creates attempt with fields", func(t *testing.T) {
@@ -182,7 +194,7 @@ func TestTxm_NewCustomTxAttempt_NonRetryableErrors(t *testing.T) {
 	cfg := txmmocks.NewConfig(t)
 	kst := ksmocks.NewEth(t)
 	lggr := logger.TestLogger(t)
-	cks := txmgr.NewEvmTxAttemptBuilder(*big.NewInt(1), cfg, &gasConfig{}, kst, nil)
+	cks := txmgr.NewEvmTxAttemptBuilder(*big.NewInt(1), cfg, newGasConfig(), kst, nil)
 
 	dynamicFee := gas.DynamicFee{TipCap: assets.GWei(100), FeeCap: assets.GWei(200)}
 	legacyFee := assets.NewWeiI(100)

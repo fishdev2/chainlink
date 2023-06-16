@@ -11,6 +11,11 @@ type TransactionManagerConfig interface {
 	SequenceAutoSync() bool
 }
 
+type TransactionManagerFeeConfig interface {
+	BroadcasterFeeConfig
+	ConfirmerFeeConfig
+}
+
 type TransactionManagerTransactionsConfig interface {
 	BroadcasterTransactionsConfig
 	ConfirmerTransactionsConfig
@@ -22,8 +27,10 @@ type TransactionManagerTransactionsConfig interface {
 }
 
 type BroadcasterConfig interface {
-	// from gas.Config
 	IsL2() bool
+}
+
+type BroadcasterFeeConfig interface {
 	MaxFeePrice() string     // logging value
 	FeePriceDefault() string // logging value
 }
@@ -38,12 +45,15 @@ type BroadcasterListenerConfig interface {
 
 type ConfirmerConfig interface {
 	RPCDefaultBatchSize() uint32
+	FinalityDepth() uint32
+}
+
+type ConfirmerFeeConfig interface {
 	FeeBumpTxDepth() uint32
 	FeeLimitDefault() uint32
 
 	// from gas.Config
 	FeeBumpThreshold() uint64
-	FinalityDepth() uint32
 	MaxFeePrice() string // logging value
 	FeeBumpPercent() uint16
 }
@@ -71,7 +81,6 @@ type ResenderTransactionsConfig interface {
 
 // ReaperConfig is the config subset used by the reaper
 type ReaperConfig interface {
-	// gas config
 	FinalityDepth() uint32
 }
 

@@ -82,7 +82,7 @@ func (e *evmConfig) OCR2() config.OCR2 {
 }
 
 func (e *evmConfig) GasEstimator() config.GasEstimator {
-	return &gasEstimatorConfig{c: e.c.GasEstimator, blockDelay: e.c.RPCBlockQueryDelay}
+	return &gasEstimatorConfig{c: e.c.GasEstimator, blockDelay: e.c.RPCBlockQueryDelay, transactionsMaxInFlight: e.c.Transactions.MaxInFlight}
 }
 
 func (c *ChainScoped) EVM() config.EVM {
@@ -112,91 +112,6 @@ func (t *transactionsConfig) MaxQueued() uint64 {
 func (c *ChainScoped) EvmFinalityDepth() uint32 {
 	return *c.cfg.FinalityDepth
 }
-
-func (c *ChainScoped) EvmGasBumpPercent() uint16 {
-	return *c.cfg.GasEstimator.BumpPercent
-}
-
-func (c *ChainScoped) EvmGasBumpThreshold() uint64 {
-	return uint64(*c.cfg.GasEstimator.BumpThreshold)
-}
-
-func (c *ChainScoped) EvmGasBumpTxDepth() uint32 {
-	if c.cfg.GasEstimator.BumpTxDepth != nil {
-		return *c.cfg.GasEstimator.BumpTxDepth
-	}
-	return *c.cfg.Transactions.MaxInFlight
-}
-
-func (c *ChainScoped) EvmGasBumpWei() *assets.Wei {
-	return c.cfg.GasEstimator.BumpMin
-}
-
-func (c *ChainScoped) EvmGasFeeCapDefault() *assets.Wei {
-	return c.cfg.GasEstimator.FeeCapDefault
-}
-
-func (c *ChainScoped) EvmGasLimitDefault() uint32 {
-	return *c.cfg.GasEstimator.LimitDefault
-}
-
-func (c *ChainScoped) EvmGasLimitMax() uint32 {
-	return *c.cfg.GasEstimator.LimitMax
-}
-
-func (c *ChainScoped) EvmGasLimitMultiplier() float32 {
-	f, _ := c.cfg.GasEstimator.LimitMultiplier.BigFloat().Float32()
-	return f
-}
-
-func (c *ChainScoped) EvmGasLimitTransfer() uint32 {
-	return *c.cfg.GasEstimator.LimitTransfer
-}
-
-func (c *ChainScoped) EvmGasLimitOCRJobType() *uint32 {
-	return c.cfg.GasEstimator.LimitJobType.OCR
-}
-
-func (c *ChainScoped) EvmGasLimitOCR2JobType() *uint32 {
-	return c.cfg.GasEstimator.LimitJobType.OCR2
-}
-
-func (c *ChainScoped) EvmGasLimitDRJobType() *uint32 {
-	return c.cfg.GasEstimator.LimitJobType.DR
-}
-
-func (c *ChainScoped) EvmGasLimitVRFJobType() *uint32 {
-	return c.cfg.GasEstimator.LimitJobType.VRF
-}
-
-func (c *ChainScoped) EvmGasLimitFMJobType() *uint32 {
-	return c.cfg.GasEstimator.LimitJobType.FM
-}
-
-func (c *ChainScoped) EvmGasLimitKeeperJobType() *uint32 {
-	return c.cfg.GasEstimator.LimitJobType.Keeper
-}
-
-func (c *ChainScoped) EvmGasPriceDefault() *assets.Wei {
-	return c.cfg.GasEstimator.PriceDefault
-}
-
-func (c *ChainScoped) EvmMinGasPriceWei() *assets.Wei {
-	return c.cfg.GasEstimator.PriceMin
-}
-
-func (c *ChainScoped) EvmMaxGasPriceWei() *assets.Wei {
-	return c.cfg.GasEstimator.PriceMax
-}
-
-func (c *ChainScoped) EvmGasTipCapDefault() *assets.Wei {
-	return c.cfg.GasEstimator.TipCapDefault
-}
-
-func (c *ChainScoped) EvmGasTipCapMinimum() *assets.Wei {
-	return c.cfg.GasEstimator.TipCapMin
-}
-
 func (c *ChainScoped) EvmLogBackfillBatchSize() uint32 {
 	return *c.cfg.LogBackfillBatchSize
 }
@@ -224,9 +139,6 @@ func (c *ChainScoped) FlagsContractAddress() string {
 	return c.cfg.FlagsContractAddress.String()
 }
 
-func (c *ChainScoped) GasEstimatorMode() string {
-	return *c.cfg.GasEstimator.Mode
-}
 func (c *ChainScoped) KeySpecificMaxGasPriceWei(addr common.Address) *assets.Wei {
 	var keySpecific *assets.Wei
 	for i := range c.cfg.KeySpecific {
@@ -237,12 +149,12 @@ func (c *ChainScoped) KeySpecificMaxGasPriceWei(addr common.Address) *assets.Wei
 		}
 	}
 
-	chainSpecific := c.EvmMaxGasPriceWei()
+	chainSpecific := c.EVM().GasEstimator().PriceMax()
 	if keySpecific != nil && !keySpecific.IsZero() && keySpecific.Cmp(chainSpecific) < 0 {
 		return keySpecific
 	}
 
-	return c.EvmMaxGasPriceWei()
+	return c.EVM().GasEstimator().PriceMax()
 }
 
 func (c *ChainScoped) LinkContractAddress() string {
@@ -373,8 +285,9 @@ func (b *blockHistoryConfig) BlockDelay() uint16 {
 }
 
 type gasEstimatorConfig struct {
-	c          GasEstimator
-	blockDelay *uint16
+	c                       GasEstimator
+	blockDelay              *uint16
+	transactionsMaxInFlight *uint32
 }
 
 func (g *gasEstimatorConfig) BlockHistory() config.BlockHistory {
@@ -383,4 +296,100 @@ func (g *gasEstimatorConfig) BlockHistory() config.BlockHistory {
 
 func (g *gasEstimatorConfig) EIP1559DynamicFees() bool {
 	return *g.c.EIP1559DynamicFees
+}
+
+func (g *gasEstimatorConfig) BumpPercent() uint16 {
+	return *g.c.BumpPercent
+}
+
+func (g *gasEstimatorConfig) BumpThreshold() uint64 {
+	return uint64(*g.c.BumpThreshold)
+}
+
+func (g *gasEstimatorConfig) BumpTxDepth() uint32 {
+	if g.c.BumpTxDepth != nil {
+		return *g.c.BumpTxDepth
+	}
+	return *g.transactionsMaxInFlight
+}
+
+func (g *gasEstimatorConfig) BumpMin() *assets.Wei {
+	return g.c.BumpMin
+}
+
+func (g *gasEstimatorConfig) FeeCapDefault() *assets.Wei {
+	return g.c.FeeCapDefault
+}
+
+func (g *gasEstimatorConfig) LimitDefault() uint32 {
+	return *g.c.LimitDefault
+}
+
+func (g *gasEstimatorConfig) LimitMax() uint32 {
+	return *g.c.LimitMax
+}
+
+func (g *gasEstimatorConfig) LimitMultiplier() float32 {
+	f, _ := g.c.LimitMultiplier.BigFloat().Float32()
+	return f
+}
+
+func (g *gasEstimatorConfig) LimitTransfer() uint32 {
+	return *g.c.LimitTransfer
+}
+
+func (g *gasEstimatorConfig) PriceDefault() *assets.Wei {
+	return g.c.PriceDefault
+}
+
+func (g *gasEstimatorConfig) PriceMin() *assets.Wei {
+	return g.c.PriceMin
+}
+
+func (g *gasEstimatorConfig) PriceMax() *assets.Wei {
+	return g.c.PriceMax
+}
+
+func (g *gasEstimatorConfig) TipCapDefault() *assets.Wei {
+	return g.c.TipCapDefault
+}
+
+func (g *gasEstimatorConfig) TipCapMin() *assets.Wei {
+	return g.c.TipCapMin
+}
+
+func (g *gasEstimatorConfig) Mode() string {
+	return *g.c.Mode
+}
+
+func (g *gasEstimatorConfig) LimitJobType() config.LimitJobType {
+	return &limitJobTypeConfig{c: g.c.LimitJobType}
+}
+
+type limitJobTypeConfig struct {
+	c GasLimitJobType
+}
+
+func (l *limitJobTypeConfig) OCR() *uint32 {
+	return l.c.OCR
+}
+
+func (l *limitJobTypeConfig) OCR2() *uint32 {
+	return l.c.OCR2
+}
+
+func (l *limitJobTypeConfig) DR() *uint32 {
+	return l.c.DR
+}
+
+func (l *limitJobTypeConfig) FM() *uint32 {
+	return l.c.FM
+}
+
+func (l *limitJobTypeConfig) Keeper() *uint32 {
+	return l.c.Keeper
+}
+
+func (l *limitJobTypeConfig) VRF() *uint32 {
+	return l.c.VRF
 }

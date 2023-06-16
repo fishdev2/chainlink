@@ -120,6 +120,7 @@ type Confirmer[
 	txmgrtypes.TxAttemptBuilder[CHAIN_ID, HEAD, ADDR, TX_HASH, BLOCK_HASH, SEQ, FEE]
 	resumeCallback ResumeCallback
 	config         txmgrtypes.ConfirmerConfig
+	feeConfig      txmgrtypes.ConfirmerFeeConfig
 	txConfig       txmgrtypes.ConfirmerTransactionsConfig
 	dbConfig       txmgrtypes.ConfirmerDatabaseConfig
 	chainID        CHAIN_ID
@@ -151,6 +152,7 @@ func NewConfirmer[
 	txStore txmgrtypes.TxStore[ADDR, CHAIN_ID, TX_HASH, BLOCK_HASH, R, SEQ, FEE],
 	client txmgrtypes.TxmClient[CHAIN_ID, ADDR, TX_HASH, BLOCK_HASH, R, SEQ, FEE],
 	config txmgrtypes.ConfirmerConfig,
+	feeConfig txmgrtypes.ConfirmerFeeConfig,
 	txConfig txmgrtypes.ConfirmerTransactionsConfig,
 	dbConfig txmgrtypes.ConfirmerDatabaseConfig,
 	keystore txmgrtypes.KeyStore[ADDR, CHAIN_ID, SEQ],
@@ -166,6 +168,7 @@ func NewConfirmer[
 		TxAttemptBuilder: txAttemptBuilder,
 		resumeCallback:   nil,
 		config:           config,
+		feeConfig:        feeConfig,
 		txConfig:         txConfig,
 		dbConfig:         dbConfig,
 		chainID:          client.ConfiguredChainID(),
@@ -178,10 +181,10 @@ func NewConfirmer[
 // Start is a comment to appease the linter
 func (ec *Confirmer[CHAIN_ID, HEAD, ADDR, TX_HASH, BLOCK_HASH, R, SEQ, FEE]) Start(_ context.Context) error {
 	return ec.StartOnce("Confirmer", func() error {
-		if ec.config.FeeBumpThreshold() == 0 {
+		if ec.feeConfig.FeeBumpThreshold() == 0 {
 			ec.lggr.Infow("Gas bumping is disabled (EVM.GasEstimator.BumpThreshold set to 0)", "ethGasBumpThreshold", 0)
 		} else {
-			ec.lggr.Infow(fmt.Sprintf("Gas bumping is enabled, unconfirmed transactions will have their gas price bumped every %d blocks", ec.config.FeeBumpThreshold()), "ethGasBumpThreshold", ec.config.FeeBumpThreshold())
+			ec.lggr.Infow(fmt.Sprintf("Gas bumping is enabled, unconfirmed transactions will have their gas price bumped every %d blocks", ec.feeConfig.FeeBumpThreshold()), "ethGasBumpThreshold", ec.feeConfig.FeeBumpThreshold())
 		}
 
 		return ec.startInternal()
@@ -622,8 +625,8 @@ func (ec *Confirmer[CHAIN_ID, HEAD, ADDR, TX_HASH, BLOCK_HASH, R, SEQ, FEE]) reb
 		return errors.Wrap(err, "handleAnyInProgressAttempts failed")
 	}
 
-	threshold := int64(ec.config.FeeBumpThreshold())
-	bumpDepth := int64(ec.config.FeeBumpTxDepth())
+	threshold := int64(ec.feeConfig.FeeBumpThreshold())
+	bumpDepth := int64(ec.feeConfig.FeeBumpTxDepth())
 	maxInFlightTransactions := ec.txConfig.MaxInFlight()
 	etxs, err := ec.FindTxsRequiringRebroadcast(ctx, ec.lggr, address, blockHeight, threshold, bumpDepth, maxInFlightTransactions, ec.chainID)
 	if err != nil {
@@ -771,7 +774,7 @@ func (ec *Confirmer[CHAIN_ID, HEAD, ADDR, TX_HASH, BLOCK_HASH, R, SEQ, FEE]) log
 		"txHash", attempt.Hash,
 		"previousAttempt", attempt,
 		"feeLimit", etx.FeeLimit,
-		"maxGasPrice", ec.config.MaxFeePrice(),
+		"maxGasPrice", ec.feeConfig.MaxFeePrice(),
 		"sequence", etx.Sequence,
 	}
 }
@@ -836,7 +839,7 @@ func (ec *Confirmer[CHAIN_ID, HEAD, ADDR, TX_HASH, BLOCK_HASH, R, SEQ, FEE]) han
 		promNumGasBumps.WithLabelValues(ec.chainID.String()).Inc()
 		lggr.With(
 			"sendError", sendError,
-			"maxGasPriceConfig", ec.config.MaxFeePrice(),
+			"maxGasPriceConfig", ec.feeConfig.MaxFeePrice(),
 			"previousAttempt", attempt,
 			"replacementAttempt", replacementAttempt,
 		).Errorf("gas price was rejected by the eth node for being too low. Eth node returned: '%s'", sendError.Error())
@@ -1062,7 +1065,7 @@ func (ec *Confirmer[CHAIN_ID, HEAD, ADDR, TX_HASH, BLOCK_HASH, R, SEQ, FEE]) For
 func (ec *Confirmer[CHAIN_ID, HEAD, ADDR, TX_HASH, BLOCK_HASH, R, SEQ, FEE]) sendEmptyTransaction(ctx context.Context, fromAddress ADDR, seq SEQ, overrideGasLimit uint32, fee FEE) (string, error) {
 	gasLimit := overrideGasLimit
 	if gasLimit == 0 {
-		gasLimit = ec.config.FeeLimitDefault()
+		gasLimit = ec.feeConfig.FeeLimitDefault()
 	}
 	txhash, err := ec.client.SendEmptyTransaction(ctx, ec.TxAttemptBuilder.NewEmptyTxAttempt, seq, gasLimit, fee, fromAddress)
 	if err != nil {
