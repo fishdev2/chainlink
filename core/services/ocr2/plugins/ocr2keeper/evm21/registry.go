@@ -453,7 +453,7 @@ func (r *EvmRegistry) pollLogs() error {
 }
 
 func UpkeepFilterName(addr common.Address) string {
-	return logpoller.FilterName("EvmRegistry - Upkeep events for", addr.String())
+	return logpoller.FilterName("KeeperRegistry Events", addr.String())
 }
 
 func (r *EvmRegistry) registerEvents(chainID uint64, addr common.Address) error {

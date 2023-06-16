@@ -317,5 +317,5 @@ func (p *logEventProvider) getFiltersBySelector(filterSelector uint8, filters ..
 }
 
 func (p *logEventProvider) filterName(upkeepID *big.Int) string {
-	return logpoller.FilterName(upkeepID.String())
+	return logpoller.FilterName("KeepersRegistry LogUpkeep", upkeepID.String())
 }
